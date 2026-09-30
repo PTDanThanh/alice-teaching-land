@@ -16,6 +16,16 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## MongoDB
+
+The app uses Mongoose for MongoDB access. Add your connection string to `.env.local`:
+
+```env
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/<database>?retryWrites=true&w=majority
+```
+
+Keep `.env.local` private and do not commit it. Import `connectToDatabase` from `lib/mongodb.ts` in a server-side route handler or other server-only code, then await it before using Mongoose models.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
