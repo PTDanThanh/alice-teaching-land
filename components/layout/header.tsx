@@ -35,7 +35,7 @@ export default function Header({ logoSrc }: HeaderProps) {
     }
 
     return (
-        <header className="relative z-40 border-b border-violet-50 bg-white">
+        <header className="sticky top-0 z-50 border-b border-violet-50 bg-white/95 backdrop-blur-sm">
             <div className="mx-auto flex min-h-19 max-w-7xl items-center justify-between gap-5 px-4 sm:px-6 lg:px-8">
                 {/* Logo và tên website */}
                 <Link
