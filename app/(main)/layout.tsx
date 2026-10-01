@@ -6,15 +6,13 @@ import Footer from "@/components/layout/footer";
 export default function MainLayout({
     children,
 }: {
-    children: ReactNode;
+    children: React.ReactNode;
 }) {
     return (
-        <div className="flex min-h-screen flex-col">
+        <>
             <Header />
-
-            <div className="flex-1">{children}</div>
-
+            <main>{children}</main>
             <Footer />
-        </div>
+        </>
     );
 }
