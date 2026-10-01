@@ -8,6 +8,7 @@ import {
 } from "@/schema/auth.schema";
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react";
+import GoogleAuthButton from "@/components/auth/google-auth-button";
 
 type ValidationErrors = Partial<
     Record<keyof LoginInput, string>
@@ -85,7 +86,7 @@ export default function LoginForm() {
     }
 
     return (
-        <section className="w-full max-w-150 rounded-3xl bg-white px-6 py-8 sm:min-h-[50vh] sm:px-12">
+        <section className="w-full max-w-150 rounded-3xl bg-white px-6 py-8 sm:min-h-[45vh] sm:px-12">
             <div className="flex items-start justify-start">
                 <Link
                     href="/home"
@@ -210,6 +211,12 @@ export default function LoginForm() {
                         Đăng ký
                     </Link>
                 </div>
+                <div className="mt-2 flex items-center justify-center gap-2 text-[16px] text-slate-500">
+                    <span>Hoặc đăng nhập qua</span>
+                    <GoogleAuthButton mode="register" redirectTo="/home" />
+                </div>
+
+
 
                 <button
                     type="submit"
