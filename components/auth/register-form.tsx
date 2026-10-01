@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { register } from "@/lib/api/auth";
-import GoogleAuthButton from "@/components/auth/google-auth-button";
+
 
 type RegisterData = {
   fullName: string;
@@ -131,7 +131,7 @@ export default function RegisterForm() {
     }
   }
 
-  const [hoveredAuth, setHoverAuth] = useState<"login" | "sign-up" | null>(null);
+  const [hoveredAuth, setHoverAuth] = useState<"login" | "sign-up" | null>("sign-up");
 
   function inputClassName(invalid: boolean) {
     return [
@@ -336,11 +336,6 @@ export default function RegisterForm() {
           )}
         </div>
 
-        {/* Google chỉ hoạt động khi được truyền callback */}
-        <div className="flex items-center justify-center gap-2 text-[16px] text-slate-500">
-          <span>Hoặc đăng ký qua</span>
-          <GoogleAuthButton mode="register" redirectTo="/home" />
-        </div>
 
         {error && (
           <p
@@ -354,7 +349,7 @@ export default function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
-          className="mx-auto flex h-12 w-full max-w-[320px] items-center justify-center rounded-full bg-[#5143EF] text-base font-semibold text-white transition hover:bg-[#4334DB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-6 mx-auto flex h-12 w-full max-w-[320px] items-center justify-center rounded-full bg-[#5143EF] text-base font-semibold text-white transition hover:bg-[#4334DB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Đang tạo tài khoản..." : "Đăng Ký"}
         </button>
