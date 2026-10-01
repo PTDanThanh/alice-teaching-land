@@ -6,6 +6,8 @@ import {
     loginSchema,
     type LoginInput,
 } from "@/schema/auth.schema";
+import Link from "next/link"
+import { ChevronLeft } from "lucide-react";
 
 type ValidationErrors = Partial<
     Record<keyof LoginInput, string>
@@ -71,25 +73,38 @@ export default function LoginForm() {
         // Hook cần tự bắt lỗi API và cập nhật state error.
         await login(parsed.data);
     }
-
-    const inputClassName = (invalid: boolean) =>
-        `w-full rounded-xl border px-4 py-3 outline-none
-     transition focus:ring-2 ${invalid
-            ? "border-red-500 focus:ring-red-200"
-            : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-200"
-        }`;
+    function inputClassName(invalid: boolean) {
+        return [
+            "h-12 w-full rounded-full bg-[#F5F2FF] px-5",
+            "text-sm text-slate-900 outline-none transition",
+            "border focus:ring-2",
+            invalid
+                ? "border-red-400 focus:ring-red-100"
+                : "border-transparent focus:border-violet-300 focus:ring-violet-100",
+        ].join(" ");
+    }
 
     return (
-        <section className="w-full max-w-md rounded-3xl border border-indigo-100 bg-white p-8 shadow-lg">
-            <div className="mb-8 text-center">
-                <h1 className="text-2xl font-bold text-gray-900">
-                    Đăng nhập quản trị
-                </h1>
+        <section className="w-full max-w-150 rounded-3xl bg-white px-6 py-8 sm:min-h-[50vh] sm:px-12">
+            <div className="flex items-start justify-start">
+                <Link
+                    href="/home"
+                    className="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-[#5143EF]"
+                >
+                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    <span> Quay về trang chủ</span>
+                </Link>
 
-                <p className="mt-2 text-sm text-gray-500">
-                    Chào mừng bạn trở lại với L’Univers d’Alice.
-                </p>
             </div>
+            {/* Vùng logo: thay bằng logo thật khi có */}
+            <div
+                aria-hidden="true"
+                className="mx-auto h-21.5 w-21.5 rounded-full bg-[#F5F2FF]"
+            />
+
+            <h1 className="mt-5 text-center whitespace-nowrap text-xl font-bold tracking-tight text-[#111827] sm:text-[36px]">
+                Alice In Teachingland
+            </h1>
 
             {error && (
                 <div
@@ -119,6 +134,7 @@ export default function LoginForm() {
                         name="email"
                         type="email"
                         autoComplete="username"
+                        placeholder="Nhập vào email của bạn"
                         required
                         maxLength={254}
                         value={formData.email}
@@ -131,9 +147,9 @@ export default function LoginForm() {
                                 ? "login-email-error"
                                 : undefined
                         }
-                        className={inputClassName(
+                        className={`${inputClassName(
                             Boolean(validationErrors.email),
-                        )}
+                        )} placeholder:text-slate-400 placeholder:font-normal`}
                     />
 
                     {validationErrors.email && (
@@ -149,7 +165,7 @@ export default function LoginForm() {
                 <div>
                     <label
                         htmlFor="login-password"
-                        className="mb-2 block text-sm font-medium text-gray-700"
+                        className="mb-2 pl-1 block text-sm font-medium text-gray-700"
                     >
                         Mật khẩu
                     </label>
@@ -158,6 +174,7 @@ export default function LoginForm() {
                         id="login-password"
                         name="password"
                         type="password"
+                        placeholder="Nhập mật khẩu của bạn"
                         autoComplete="current-password"
                         required
                         value={formData.password}
@@ -170,9 +187,9 @@ export default function LoginForm() {
                                 ? "login-password-error"
                                 : undefined
                         }
-                        className={inputClassName(
+                        className={`${inputClassName(
                             Boolean(validationErrors.password),
-                        )}
+                        )} placeholder:text-slate-400 placeholder:font-normal`}
                     />
 
                     {validationErrors.password && (
@@ -185,10 +202,19 @@ export default function LoginForm() {
                     )}
                 </div>
 
+                <div className="flex items-center justify-center text[16px] text-gray-500" >
+                    <span> Đăng ký nếu bạn chưa có tài khoản?</span>
+                    <Link
+                        href="/register"
+                        className="ml-2 cursor-pointer font-bold text-[#5143EF] hover: underline">
+                        Đăng ký
+                    </Link>
+                </div>
+
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full rounded-xl bg-indigo-600 px-4 py-3 font-medium text-white transition hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-xl cursor-pointer bg-indigo-600 px-4 py-3 font-medium text-white transition hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {loading ? "Đang xử lý..." : "Đăng nhập"}
                 </button>

@@ -1,12 +1,15 @@
-import mongoose, { Schema, type Document, type Model } from 'mongoose';
+import mongoose, { Schema, type Document, type Model } from "mongoose";
 
-export type UserRole = 'admin' | 'teacher' | 'student';
+export type UserRole = "admin" | "client";
 
 export interface UserDocument extends Document {
   email: string;
-  passwordHash: string;
-  name: string;
+  passwordHash?: string | null;
+  fullName: string;
+  googleId?: string | null;
+  avatar?: string | null;
   role: UserRole;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,27 +25,42 @@ const UserSchema = new Schema<UserDocument>(
     },
     passwordHash: {
       type: String,
-      required: true,
+      default: null,
       select: false,
     },
-    name: {
+    fullName: {
       type: String,
       required: true,
       trim: true,
     },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: null,
+    },
+    avatar: {
+      type: String,
+      default: null,
+    },
     role: {
       type: String,
-      enum: ['admin', 'teacher', 'student'],
-      default: 'student',
+      enum: ["admin", "client"],
+      default: "client",
+      required: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const UserModel =
   (mongoose.models.User as Model<UserDocument> | undefined) ||
-  mongoose.model<UserDocument>('User', UserSchema);
+  mongoose.model<UserDocument>("User", UserSchema);
 
 export default UserModel;

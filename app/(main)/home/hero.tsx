@@ -26,6 +26,7 @@ export default function Hero() {
                         <span className="text-slate-600">
                             Học tiếng Pháp thật dễ dàng
                         </span>
+                        
                     </div>
 
                     <h1

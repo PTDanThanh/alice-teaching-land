@@ -1,7 +1,7 @@
 import connectToDatabase from '@/lib/mongodb';
 import UserModel, { type UserDocument } from '@/src/models/auth/user.model';
 
-export type AuthUserSummary = Pick<UserDocument, 'email' | 'name' | 'role'> & {
+export type AuthUserSummary = Pick<UserDocument, 'email' | 'fullName' | 'role'> & {
   id: string;
 };
 

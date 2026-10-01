@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { register } from "@/lib/api/auth";
+import GoogleAuthButton from "@/components/auth/google-auth-button";
 
 type RegisterData = {
   fullName: string;
@@ -17,10 +18,6 @@ type RegisterData = {
 };
 
 type FieldErrors = Partial<Record<keyof RegisterData, string>>;
-
-type RegisterFormProps = {
-  onGoogleRegister?: () => void;
-};
 
 function EyeIcon({ hidden }: { hidden: boolean }) {
   return (
@@ -41,9 +38,7 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   );
 }
 
-export default function RegisterForm({
-  onGoogleRegister,
-}: RegisterFormProps) {
+export default function RegisterForm() {
   const router = useRouter();
   const busyRef = useRef(false);
 
@@ -272,7 +267,7 @@ export default function RegisterForm({
             }
             className={`${inputClassName(
               Boolean(fieldErrors.email),
-            )} laceholder:text-slate-400 placeholder:font-normal`}
+            )} placeholder:text-slate-400 placeholder:font-normal`}
           />
 
           {fieldErrors.email && (
@@ -313,7 +308,7 @@ export default function RegisterForm({
               }
               className={`${inputClassName(
                 Boolean(fieldErrors.password),
-              )} laceholder:text-slate-400 placeholder:font-normal pr-14`}
+              )} placeholder:text-slate-400 placeholder:font-normal pr-14`}
             />
 
             <button
@@ -342,23 +337,9 @@ export default function RegisterForm({
         </div>
 
         {/* Google chỉ hoạt động khi được truyền callback */}
-        <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+        <div className="flex items-center justify-center gap-2 text-[16px] text-slate-500">
           <span>Hoặc đăng ký qua</span>
-
-          <button
-            type="button"
-            disabled={!onGoogleRegister || loading}
-            onClick={onGoogleRegister}
-            aria-label="Đăng ký bằng Google"
-            title={
-              onGoogleRegister
-                ? "Đăng ký bằng Google"
-                : "Đăng ký Google chưa được tích hợp"
-            }
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-2xl font-bold text-[#5143EF] focus-visible:outline-2 focus-visible:outline-violet-500 disabled:cursor-not-allowed"
-          >
-            G
-          </button>
+          <GoogleAuthButton mode="register" redirectTo="/home" />
         </div>
 
         {error && (
