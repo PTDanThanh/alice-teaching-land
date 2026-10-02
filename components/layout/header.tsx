@@ -56,11 +56,11 @@ export default function Header({ logoSrc }: HeaderProps) {
                     </div>
 
                     <div>
-                        <p className="text-sm font-bold tracking-tight text-slate-900 sm:text-base">
+                        <p className="text-[20px] font-bold tracking-tight text-slate-900 sm:text-base">
                             Alice In Teachingland
                         </p>
 
-                        <p className="mt-0.5 hidden text-[10px] text-slate-600 sm:block">
+                        <p className="mt-0.5 hidden text-[12px] text-slate-600 sm:block">
                             Language Learning &amp; Teaching Studio
                         </p>
                     </div>
@@ -79,7 +79,7 @@ export default function Header({ logoSrc }: HeaderProps) {
                                 key={item.href}
                                 href={item.href}
                                 aria-current={active ? "page" : undefined}
-                                className={`rounded-lg px-1 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-violet-500 ${active
+                                className={`rounded-lg px-1 py-2 text-[16px] transition focus-visible:outline-2 focus-visible:outline-violet-500 ${active
                                     ? "font-semibold text-[#5143EF]"
                                     : "text-slate-600 hover:text-[#5143EF]"
                                     }`}
