@@ -3,6 +3,7 @@
 import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/http";
 
 interface GoogleCredential {
     credential: string;
@@ -66,28 +67,7 @@ export default function GoogleAuthButton({
             setError(null);
 
             try {
-                const response = await fetch("/api/auth/google", {
-                    method: "POST",
-                    credentials: "same-origin",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ credential }),
-                });
-
-                const data: unknown = await response.json();
-
-                if (!response.ok) {
-                    const message =
-                        typeof data === "object" &&
-                            data !== null &&
-                            "message" in data &&
-                            typeof data.message === "string"
-                            ? data.message
-                            : "Đăng nhập Google thất bại.";
-
-                    throw new Error(message);
-                }
+                await apiClient.post("/api/auth/google", { credential });
 
                 const destination =
                     redirectTo.startsWith("/") &&

@@ -46,9 +46,9 @@ export function useAuth() {
         setError(null);
 
         try {
-            await authService.login(data);
+            const result = await authService.login(data);
 
-            router.replace("/admin");
+            router.replace(result.user?.role === "admin" ? "/admin" : "/home");
             router.refresh();
 
             return true;

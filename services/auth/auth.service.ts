@@ -93,6 +93,61 @@ export async function newSession(
   };
 }
 
+export async function register(body: Record<string, unknown>) {
+  const fullName =
+    typeof body.fullName === "string" ? body.fullName.trim() : "";
+  const email =
+    typeof body.email === "string"
+      ? body.email.trim().toLowerCase()
+      : "";
+  const password = typeof body.password === "string" ? body.password : "";
+
+  if (!fullName || fullName.length > 100) {
+    throw new AuthError("Họ và tên không hợp lệ.", 400);
+  }
+
+  if (
+    email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    throw new AuthError("Email không hợp lệ.", 400);
+  }
+
+  if (
+    !password ||
+    password.length < 8 ||
+    Buffer.byteLength(password, "utf8") > 72
+  ) {
+    throw new AuthError("Mật khẩu phải có ít nhất 8 ký tự.", 400);
+  }
+
+  if (
+    body.rememberMe !== undefined &&
+    typeof body.rememberMe !== "boolean"
+  ) {
+    throw new AuthError("Dữ liệu đăng ký không hợp lệ.", 400);
+  }
+
+  await connectToDatabase();
+  await limit(`register:${email}`, 10);
+
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser) {
+    throw new AuthError("Email này đã được sử dụng.", 409);
+  }
+
+  const user = await User.create({
+    fullName,
+    email,
+    passwordHash: await bcrypt.hash(password, 12),
+    role: "client",
+    isActive: true,
+  });
+
+  return newSession(user, body.rememberMe === true);
+}
+
 export async function login(body: Record<string, unknown>) {
   if (
     typeof body.email !== "string" ||

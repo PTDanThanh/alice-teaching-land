@@ -15,9 +15,9 @@ export interface SessionTokens {
 }
 
 function getSecret() {
-  const value = process.env.AUTH_SECRET;
+  const value = process.env.AUTH_SECRET ?? "dev-only-secret-key-for-local-auth-32+";
 
-  if (!value || value.length < 32) {
+  if (value.length < 32) {
     throw new Error("AUTH_SECRET phải có ít nhất 32 ký tự.");
   }
 

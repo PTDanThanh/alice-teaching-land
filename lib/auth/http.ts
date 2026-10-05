@@ -20,13 +20,13 @@ export function json(data: unknown, status = 200) {
 }
 
 export function checkOrigin(request: NextRequest) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3002";
 
-  if (!siteUrl) {
-    throw new Error("Missing NEXT_PUBLIC_SITE_URL");
-  }
+  const origin = request.headers.get("origin");
+  const expectedOrigin = new URL(siteUrl).origin;
 
-  if (request.headers.get("origin") !== new URL(siteUrl).origin) {
+  if (origin && origin !== expectedOrigin) {
     throw new AuthError("Nguồn gửi yêu cầu không hợp lệ.", 403);
   }
 }

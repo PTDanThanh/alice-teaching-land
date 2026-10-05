@@ -10,18 +10,18 @@ declare global {
     | undefined;
 }
 
-const MONGODB_URI = process.env.MONGODB_URI ?? '';
-
-if (!MONGODB_URI) {
-  throw new Error('Missing MONGODB_URI in the environment');
-}
-
 const cached = (globalThis.mongooseCache ??= {
   conn: null,
   promise: null,
 });
 
 export default async function connectToDatabase(): Promise<Mongoose> {
+  const MONGODB_URI = process.env.MONGODB_URI;
+
+  if (!MONGODB_URI) {
+    throw new Error('Missing MONGODB_URI in the environment');
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
