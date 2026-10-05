@@ -4,9 +4,9 @@ import mongoose, { type Mongoose } from 'mongoose';
 declare global {
   var mongooseCache:
     | {
-        conn: Mongoose | null;
-        promise: Promise<Mongoose> | null;
-      }
+      conn: Mongoose | null;
+      promise: Promise<Mongoose> | null;
+    }
     | undefined;
 }
 
@@ -34,6 +34,16 @@ export default async function connectToDatabase(): Promise<Mongoose> {
 
   try {
     cached.conn = await cached.promise;
+
+    const db = mongoose.connection.db;
+    if (db) {
+      try {
+        await db.collection('users').dropIndex('googleId_1');
+      } catch {
+        // Ignore: the old nullable unique index may not exist; the new partial index will enforce the correct behavior.
+      }
+    }
+
     console.log('✅ Đã kết nối MongoDB thành công.');
     return cached.conn;
   } catch (error) {

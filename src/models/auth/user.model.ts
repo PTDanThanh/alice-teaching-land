@@ -12,7 +12,17 @@ export interface UserDocument extends Document {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  loginCount: number;
+  lastLoginAt?: Date | null;
+  totalTimeOnSiteSeconds: number;
+  timeOnSiteAccountedAt?: Date | null;
+  timeOnSiteTabs: Array<{
+    tabId: string;
+    expiresAt: Date;
+  }>;
 }
+
+
 
 const UserSchema = new Schema<UserDocument>(
   {
@@ -35,9 +45,8 @@ const UserSchema = new Schema<UserDocument>(
     },
     googleId: {
       type: String,
-      unique: true,
-      sparse: true,
       default: null,
+      sparse: true,
     },
     avatar: {
       type: String,
@@ -53,12 +62,54 @@ const UserSchema = new Schema<UserDocument>(
       type: Boolean,
       default: true,
     },
+    loginCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+    totalTimeOnSiteSeconds: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    timeOnSiteAccountedAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+
+    timeOnSiteTabs: {
+      type: [
+        {
+          _id: false,
+          tabId: { type: String, required: true },
+          expiresAt: { type: Date, required: true },
+        },
+      ],
+      default: [],
+      select: false,
+    },
   },
   {
     timestamps: true,
   },
-);
 
+);
+UserSchema.index(
+  { googleId: 1 },
+  {
+    name: "googleId_unique_string",
+    unique: true,
+    partialFilterExpression: {
+      googleId: { $type: "string" },
+    },
+  },
+);
 const UserModel =
   (mongoose.models.User as Model<UserDocument> | undefined) ||
   mongoose.model<UserDocument>("User", UserSchema);

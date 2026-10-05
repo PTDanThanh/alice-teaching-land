@@ -24,12 +24,21 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, default: null, select: false },
     fullName: { type: String, required: true, trim: true },
-    googleId: { type: String, unique: true, sparse: true, default: null },
+    googleId: { type: String, default: null, sparse: true },
     avatar: { type: String, default: null },
     role: { type: String, enum: ["admin", "client"], default: "client", required: true },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },
+);
+
+userSchema.index(
+  { googleId: 1 },
+  {
+    name: "googleId_unique_string",
+    unique: true,
+    partialFilterExpression: { googleId: { $type: "string" } },
+  },
 );
 
 const User = mongoose.models.User ?? mongoose.model("User", userSchema);

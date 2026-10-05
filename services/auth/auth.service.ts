@@ -16,13 +16,19 @@ import User, { type UserDocument as UserRecord } from "@/src/models/auth/user.mo
 import Session from "@/src/models/auth/session.model";
 
 export function publicUser(
-  user: Pick<UserRecord, "_id" | "fullName" | "email" | "role">,
+  user: Pick<
+    UserRecord,
+    "_id" | "fullName" | "email" | "role" | "loginCount" | "lastLoginAt" | "totalTimeOnSiteSeconds"
+  >,
 ) {
   return {
     id: String(user._id),
     fullName: user.fullName,
     email: user.email,
     role: user.role,
+    loginCount: user.loginCount ?? 0,
+    lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+    totalTimeOnSiteSeconds: Number(user.totalTimeOnSiteSeconds ?? 0),
   };
 }
 
@@ -38,6 +44,8 @@ rateLimitSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const AuthRateLimit =
   mongoose.models.AuthRateLimit ??
   mongoose.model("AuthRateLimit", rateLimitSchema);
+
+
 
 export async function limit(key: string, maximum: number) {
   const windowMs = 15 * 60 * 1000;
@@ -167,7 +175,7 @@ export async function login(body: Record<string, unknown>) {
   await connectToDatabase();
   await limit(`login:${email}`, 10);
 
-  const user = await User.findOne({ email }).select("+passwordHash");
+  const user = await User.findOne({ email }).select("+passwordHash",);
 
   // Hash dự phòng giúp giảm khác biệt thời gian khi tài khoản không tồn tại.
   const fallbackHash =
@@ -182,7 +190,14 @@ export async function login(body: Record<string, unknown>) {
     throw new AuthError("Email hoặc mật khẩu không chính xác.");
   }
 
-  return newSession(user, body.rememberMe === true);
+  const session = await newSession(
+    user,
+    body.rememberMe === true,
+  );
+
+  await recordSuccessfulLogin(String(user._id));
+
+  return session;
 }
 
 export async function refresh(refreshToken: string | undefined) {
@@ -309,4 +324,14 @@ export async function logout(
       );
     }
   }
+}
+//ghi nhận giá trị đăng nhập 
+export async function recordSuccessfulLogin(userId: string) {
+  await User.updateOne(
+    { _id: userId },
+    {
+      $inc: { loginCount: 1 },
+      $set: { lastLoginAt: new Date() },
+    },
+  );
 }
