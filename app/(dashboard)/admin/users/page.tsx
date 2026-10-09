@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { Ban, CheckCircle2, Loader2, ShieldCheck, UserRound } from "lucide-react";
-
+import { Ban, CheckCircle2, Loader2, ShieldCheck, UserRound, Search, } from "lucide-react";
+import { useSearchParams } from 'next/navigation';
 import { apiClient, getApiErrorMessage } from "@/lib/http";
 
 type UserRecord = {
@@ -24,6 +24,15 @@ function formatTimeOnSite(totalSeconds: number = 0): string {
         ? Math.max(0, Math.floor(totalSeconds))
         : 0;
 
+    function normallizeSearch(value: string): string {
+        return value
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[đĐ]/g, "d")
+            .toLowerCase()
+            .trim();
+    }
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
@@ -38,8 +47,7 @@ export default function AdminUsersPage() {
     const [error, setError] = useState("");
     const savingRef = useRef(false);
 
-    //filter bộ lọc
-    
+
 
     useEffect(() => {
         let disposed = false;
@@ -159,6 +167,11 @@ export default function AdminUsersPage() {
             admins: users.filter((user) => user.role === "admin").length,
         };
     }, [users]);
+
+    //filter bộ lọc
+    const [search, setSearch] = useState("")
+
+
 
     return (
         <div className="space-y-6">

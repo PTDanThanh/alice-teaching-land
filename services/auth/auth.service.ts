@@ -15,6 +15,30 @@ import {
 import User, { type UserDocument as UserRecord } from "@/src/models/auth/user.model";
 import Session from "@/src/models/auth/session.model";
 
+//[THÊM]đọc các cấu hình 
+function readPositiveIntegerEnv(name: string, fallback: number): number{
+  const raw = process.env[name];
+
+  if (raw === undefined) return fallback;
+
+  const value = Number(raw);
+
+  if(!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error (`${name} phải là số nguyên dương.`);
+  }
+  return value;
+}
+
+const REFRESH_TOKEN_TTL_DAYS = readPositiveIntegerEnv(
+  "REFRESH_TOKEN_TTL_DAYS",
+  1,
+);
+
+const REFRESH_TOKEN_REMEMBER_TTL_DAYS = readPositiveIntegerEnv(
+  "REFRESH_TOKEN_REMEMBER_TTL_DAYS",
+  7,
+);
+
 export function publicUser(
   user: Pick<
     UserRecord,
@@ -69,7 +93,7 @@ export async function limit(key: string, maximum: number) {
     );
   }
 }
-
+//[SỬA]
 export async function newSession(
   user: UserRecord,
   rememberMe: boolean,
@@ -77,8 +101,12 @@ export async function newSession(
   const sessionId = new mongoose.Types.ObjectId();
   const refreshToken = createRefreshToken(String(sessionId));
 
+  const ttlDays = rememberMe
+  ? REFRESH_TOKEN_REMEMBER_TTL_DAYS
+  : REFRESH_TOKEN_TTL_DAYS;
+
   const expiresAt = new Date(
-    Date.now() + (rememberMe ? 7 : 1) * 24 * 60 * 60 * 1000,
+    Date.now() + ttlDays * 24 * 60 * 60 * 1000,
   );
 
   const accessToken = await signAccessToken(
