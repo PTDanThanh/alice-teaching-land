@@ -6,7 +6,28 @@ import type { NextResponse } from "next/server";
 
 export const ACCESS_COOKIE = "alice_access";
 export const REFRESH_COOKIE = "alice_refresh";
-export const ACCESS_SECONDS = 15 * 60;
+
+function readPositiveIntegerEnv(
+  name: string,
+  fallback: number,
+): number {
+  const raw = process.env[name];
+  const value = raw === undefined ? fallback : Number(raw);
+
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${name} phải là số nguyên dương.`);
+  }
+
+  return value;
+}
+
+export const ACCESS_SECONDS = readPositiveIntegerEnv(
+  "ACCESS_TOKEN_TTL_SECONDS",
+  900,
+);
+
+// Dùng cùng đường dẫn khi tạo và xóa cookie.
+const REFRESH_COOKIE_PATH = "/api/auth";
 
 export interface SessionTokens {
   accessToken: string;
@@ -14,7 +35,7 @@ export interface SessionTokens {
   expiresAt: Date;
 }
 
-function getSecret() {
+function getSecret(): Uint8Array {
   const value = process.env.AUTH_SECRET;
 
   if (!value || value.length < 32) {
@@ -24,15 +45,21 @@ function getSecret() {
   return new TextEncoder().encode(value);
 }
 
-export function hashToken(value: string) {
+export function hashToken(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-export function createRefreshToken(sessionId: string) {
+export function createRefreshToken(sessionId: string): string {
+  if (!/^[a-f0-9]{24}$/.test(sessionId)) {
+    throw new Error("Session ID không hợp lệ.");
+  }
+
   return `${sessionId}.${randomBytes(32).toString("hex")}`;
 }
 
-export function getRefreshSessionId(value: string | undefined) {
+export function getRefreshSessionId(
+  value: string | undefined,
+): string | null {
   if (!value || !/^[a-f0-9]{24}\.[a-f0-9]{64}$/.test(value)) {
     return null;
   }
@@ -43,18 +70,22 @@ export function getRefreshSessionId(value: string | undefined) {
 export async function signAccessToken(
   userId: string,
   sessionId: string,
-) {
+): Promise<string> {
+  const issuedAt = Math.floor(Date.now() / 1000);
+
   return new SignJWT({ sid: sessionId })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(userId)
     .setIssuer("alicetland")
     .setAudience("alicetland")
-    .setIssuedAt()
-    .setExpirationTime(`${ACCESS_SECONDS}s`)
+    .setIssuedAt(issuedAt)
+    .setExpirationTime(issuedAt + ACCESS_SECONDS)
     .sign(getSecret());
 }
 
-export async function verifyAccessToken(token: string) {
+export async function verifyAccessToken(
+  token: string,
+): Promise<{ userId: string; sessionId: string } | null> {
   const secret = getSecret();
 
   try {
@@ -65,14 +96,19 @@ export async function verifyAccessToken(token: string) {
     });
 
     if (
-      !/^[a-f0-9]{24}$/.test(payload.sub ?? "") ||
+      typeof payload.sub !== "string" ||
+      !/^[a-f0-9]{24}$/.test(payload.sub) ||
       typeof payload.sid !== "string" ||
-      !/^[a-f0-9]{24}$/.test(payload.sid)
+      !/^[a-f0-9]{24}$/.test(payload.sid) ||
+      typeof payload.exp !== "number"
     ) {
       return null;
     }
 
-    return { userId: payload.sub!, sessionId: payload.sid };
+    return {
+      userId: payload.sub,
+      sessionId: payload.sid,
+    };
   } catch {
     return null;
   }
@@ -89,7 +125,7 @@ function cookieOptions() {
 export function setAuthCookies(
   response: NextResponse,
   tokens: SessionTokens,
-) {
+): void {
   response.cookies.set(ACCESS_COOKIE, tokens.accessToken, {
     ...cookieOptions(),
     path: "/",
@@ -98,7 +134,7 @@ export function setAuthCookies(
 
   response.cookies.set(REFRESH_COOKIE, tokens.refreshToken, {
     ...cookieOptions(),
-    path: "/api/auth",
+    path: REFRESH_COOKIE_PATH,
     maxAge: Math.max(
       0,
       Math.floor((tokens.expiresAt.getTime() - Date.now()) / 1000),
@@ -106,7 +142,7 @@ export function setAuthCookies(
   });
 }
 
-export function clearAuthCookies(response: NextResponse) {
+export function clearAuthCookies(response: NextResponse): void {
   response.cookies.set(ACCESS_COOKIE, "", {
     ...cookieOptions(),
     path: "/",
@@ -115,7 +151,7 @@ export function clearAuthCookies(response: NextResponse) {
 
   response.cookies.set(REFRESH_COOKIE, "", {
     ...cookieOptions(),
-    path: "/api/auth",
+    path: REFRESH_COOKIE_PATH,
     maxAge: 0,
   });
 }

@@ -1,56 +1,45 @@
 import type { LoginInput } from "@/schema/auth.schema";
+import { apiClient, getApiErrorMessage } from "@/lib/http";
 
 export type AuthApiResponse<T = unknown> = {
     success?: boolean;
     message?: string;
     data?: T;
+    user?: {
+        id: string;
+        fullName: string;
+        email: string;
+        role: "admin" | "client";
+    };
 };
 
-async function readJson<T = unknown>(response: Response): Promise<T> {
-    return (await response.json().catch(() => ({}))) as T;
-}
-
 export const authService = {
-    async login(data: LoginInput): Promise<AuthApiResponse<{ email?: string }>> {
-        const response = await fetch("/api/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-        });
+    async login(data: LoginInput): Promise<AuthApiResponse> {
+        try {
+            const { data: payload } = await apiClient.post<AuthApiResponse>(
+                "/api/login",
+                data,
+            );
 
-        const payload = await readJson<AuthApiResponse<{ email?: string }>>(response);
-
-        if (!response.ok) {
+            return payload;
+        } catch (error) {
             throw new Error(
-                typeof payload.message === "string"
-                    ? payload.message
-                    : "Đăng nhập thất bại",
+                getApiErrorMessage(error, "Đăng nhập thất bại"),
             );
         }
-
-        return payload;
     },
 
     async logout(): Promise<AuthApiResponse> {
-        const response = await fetch("/api/logout", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
+        try {
+            const { data: payload } = await apiClient.post<AuthApiResponse>(
+                "/api/logout",
+            );
 
-        const payload = await readJson<AuthApiResponse>(response);
-
-        if (!response.ok) {
+            return payload;
+        } catch (error) {
             throw new Error(
-                typeof payload.message === "string"
-                    ? payload.message
-                    : "Đăng xuất thất bại",
+                getApiErrorMessage(error, "Đăng xuất thất bại"),
             );
         }
-
-        return payload;
     },
 };

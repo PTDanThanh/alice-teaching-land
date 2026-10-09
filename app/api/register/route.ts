@@ -7,7 +7,7 @@ import {
   json,
 } from "@/lib/auth/http";
 import { setAuthCookies } from "@/lib/auth/tokens";
-import { login } from "@/services/auth/auth.service";
+import { register } from "@/services/auth/auth.service";
 
 export const runtime = "nodejs";
 
@@ -36,8 +36,12 @@ export async function POST(request: NextRequest) {
       throw new AuthError("Dữ liệu không hợp lệ.", 400);
     }
 
-    const result = await login(body);
-    const response = json({ user: result.user });
+    const result = await register(body);
+    const response = json({
+      user: result.user,
+      message: "Đăng ký thành công.",
+    });
+
     setAuthCookies(response, result);
     return response;
   } catch (error) {

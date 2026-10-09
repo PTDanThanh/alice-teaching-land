@@ -15,14 +15,44 @@ import {
 import User, { type UserDocument as UserRecord } from "@/src/models/auth/user.model";
 import Session from "@/src/models/auth/session.model";
 
+//[THÊM]đọc các cấu hình 
+function readPositiveIntegerEnv(name: string, fallback: number): number{
+  const raw = process.env[name];
+
+  if (raw === undefined) return fallback;
+
+  const value = Number(raw);
+
+  if(!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error (`${name} phải là số nguyên dương.`);
+  }
+  return value;
+}
+
+const REFRESH_TOKEN_TTL_DAYS = readPositiveIntegerEnv(
+  "REFRESH_TOKEN_TTL_DAYS",
+  1,
+);
+
+const REFRESH_TOKEN_REMEMBER_TTL_DAYS = readPositiveIntegerEnv(
+  "REFRESH_TOKEN_REMEMBER_TTL_DAYS",
+  7,
+);
+
 export function publicUser(
-  user: Pick<UserRecord, "_id" | "fullName" | "email" | "role">,
+  user: Pick<
+    UserRecord,
+    "_id" | "fullName" | "email" | "role" | "loginCount" | "lastLoginAt" | "totalTimeOnSiteSeconds"
+  >,
 ) {
   return {
     id: String(user._id),
     fullName: user.fullName,
     email: user.email,
     role: user.role,
+    loginCount: user.loginCount ?? 0,
+    lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+    totalTimeOnSiteSeconds: Number(user.totalTimeOnSiteSeconds ?? 0),
   };
 }
 
@@ -38,6 +68,8 @@ rateLimitSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const AuthRateLimit =
   mongoose.models.AuthRateLimit ??
   mongoose.model("AuthRateLimit", rateLimitSchema);
+
+
 
 export async function limit(key: string, maximum: number) {
   const windowMs = 15 * 60 * 1000;
@@ -61,7 +93,7 @@ export async function limit(key: string, maximum: number) {
     );
   }
 }
-
+//[SỬA]
 export async function newSession(
   user: UserRecord,
   rememberMe: boolean,
@@ -69,8 +101,12 @@ export async function newSession(
   const sessionId = new mongoose.Types.ObjectId();
   const refreshToken = createRefreshToken(String(sessionId));
 
+  const ttlDays = rememberMe
+  ? REFRESH_TOKEN_REMEMBER_TTL_DAYS
+  : REFRESH_TOKEN_TTL_DAYS;
+
   const expiresAt = new Date(
-    Date.now() + (rememberMe ? 7 : 1) * 24 * 60 * 60 * 1000,
+    Date.now() + ttlDays * 24 * 60 * 60 * 1000,
   );
 
   const accessToken = await signAccessToken(
@@ -93,6 +129,61 @@ export async function newSession(
   };
 }
 
+export async function register(body: Record<string, unknown>) {
+  const fullName =
+    typeof body.fullName === "string" ? body.fullName.trim() : "";
+  const email =
+    typeof body.email === "string"
+      ? body.email.trim().toLowerCase()
+      : "";
+  const password = typeof body.password === "string" ? body.password : "";
+
+  if (!fullName || fullName.length > 100) {
+    throw new AuthError("Họ và tên không hợp lệ.", 400);
+  }
+
+  if (
+    email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    throw new AuthError("Email không hợp lệ.", 400);
+  }
+
+  if (
+    !password ||
+    password.length < 8 ||
+    Buffer.byteLength(password, "utf8") > 72
+  ) {
+    throw new AuthError("Mật khẩu phải có ít nhất 8 ký tự.", 400);
+  }
+
+  if (
+    body.rememberMe !== undefined &&
+    typeof body.rememberMe !== "boolean"
+  ) {
+    throw new AuthError("Dữ liệu đăng ký không hợp lệ.", 400);
+  }
+
+  await connectToDatabase();
+  await limit(`register:${email}`, 10);
+
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser) {
+    throw new AuthError("Email này đã được sử dụng.", 409);
+  }
+
+  const user = await User.create({
+    fullName,
+    email,
+    passwordHash: await bcrypt.hash(password, 12),
+    role: "client",
+    isActive: true,
+  });
+
+  return newSession(user, body.rememberMe === true);
+}
+
 export async function login(body: Record<string, unknown>) {
   if (
     typeof body.email !== "string" ||
@@ -112,7 +203,7 @@ export async function login(body: Record<string, unknown>) {
   await connectToDatabase();
   await limit(`login:${email}`, 10);
 
-  const user = await User.findOne({ email }).select("+passwordHash");
+  const user = await User.findOne({ email }).select("+passwordHash",);
 
   // Hash dự phòng giúp giảm khác biệt thời gian khi tài khoản không tồn tại.
   const fallbackHash =
@@ -127,7 +218,14 @@ export async function login(body: Record<string, unknown>) {
     throw new AuthError("Email hoặc mật khẩu không chính xác.");
   }
 
-  return newSession(user, body.rememberMe === true);
+  const session = await newSession(
+    user,
+    body.rememberMe === true,
+  );
+
+  await recordSuccessfulLogin(String(user._id));
+
+  return session;
 }
 
 export async function refresh(refreshToken: string | undefined) {
@@ -254,4 +352,14 @@ export async function logout(
       );
     }
   }
+}
+//ghi nhận giá trị đăng nhập 
+export async function recordSuccessfulLogin(userId: string) {
+  await User.updateOne(
+    { _id: userId },
+    {
+      $inc: { loginCount: 1 },
+      $set: { lastLoginAt: new Date() },
+    },
+  );
 }

@@ -4,16 +4,10 @@ import mongoose, { type Mongoose } from 'mongoose';
 declare global {
   var mongooseCache:
     | {
-        conn: Mongoose | null;
-        promise: Promise<Mongoose> | null;
-      }
+      conn: Mongoose | null;
+      promise: Promise<Mongoose> | null;
+    }
     | undefined;
-}
-
-const MONGODB_URI = process.env.MONGODB_URI ?? '';
-
-if (!MONGODB_URI) {
-  throw new Error('Missing MONGODB_URI in the environment');
 }
 
 const cached = (globalThis.mongooseCache ??= {
@@ -22,6 +16,12 @@ const cached = (globalThis.mongooseCache ??= {
 });
 
 export default async function connectToDatabase(): Promise<Mongoose> {
+  const MONGODB_URI = process.env.MONGODB_URI;
+
+  if (!MONGODB_URI) {
+    throw new Error('Missing MONGODB_URI in the environment');
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
@@ -34,6 +34,16 @@ export default async function connectToDatabase(): Promise<Mongoose> {
 
   try {
     cached.conn = await cached.promise;
+
+    const db = mongoose.connection.db;
+    if (db) {
+      try {
+        await db.collection('users').dropIndex('googleId_1');
+      } catch {
+        // Ignore: the old nullable unique index may not exist; the new partial index will enforce the correct behavior.
+      }
+    }
+
     console.log('✅ Đã kết nối MongoDB thành công.');
     return cached.conn;
   } catch (error) {

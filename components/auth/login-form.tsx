@@ -127,7 +127,7 @@ export default function LoginForm() {
                         htmlFor="login-email"
                         className="mb-2 block text-sm font-medium text-gray-700"
                     >
-                        Email
+                        Tên đăng nhập (email)
                     </label>
 
                     <input
@@ -135,7 +135,7 @@ export default function LoginForm() {
                         name="email"
                         type="email"
                         autoComplete="username"
-                        placeholder="Nhập vào email của bạn"
+                        placeholder="Nhập email đăng nhập admin"
                         required
                         maxLength={254}
                         value={formData.email}

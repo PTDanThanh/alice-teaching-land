@@ -20,15 +20,30 @@ export function json(data: unknown, status = 200) {
 }
 
 export function checkOrigin(request: NextRequest) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const origin = request.headers.get("origin");
+  const host = request.headers.get("host");
 
-  if (!siteUrl) {
-    throw new Error("Missing NEXT_PUBLIC_SITE_URL");
+  if (!origin) {
+    return;
   }
 
-  if (request.headers.get("origin") !== new URL(siteUrl).origin) {
-    throw new AuthError("Nguồn gửi yêu cầu không hợp lệ.", 403);
+  const configuredSiteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
+
+  const expectedOrigin = new URL(configuredSiteUrl).origin;
+  const requestOrigin = new URL(origin);
+
+  const isSameConfiguredOrigin = requestOrigin.origin === expectedOrigin;
+  const isSameHost = host ? requestOrigin.host === host : false;
+  const isLocalhost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(
+    requestOrigin.hostname,
+  );
+
+  if (isSameConfiguredOrigin || isSameHost || isLocalhost) {
+    return;
   }
+
+  throw new AuthError("Nguồn gửi yêu cầu không hợp lệ.", 403);
 }
 
 export function errorResponse(error: unknown) {
@@ -36,10 +51,7 @@ export function errorResponse(error: unknown) {
     return json({ message: error.message }, error.status);
   }
 
-  console.error(
-    "Auth server error:",
-    error instanceof Error ? error.name : "UnknownError",
-  );
+  console.error("Auth server error:", error);
 
   return json({ message: "Server gặp sự cố. Vui lòng thử lại." }, 500);
 }
