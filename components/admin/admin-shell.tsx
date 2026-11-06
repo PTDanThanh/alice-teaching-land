@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft, Menu, X } from "lucide-react";
 
-import { apiClient } from "@/lib/http";
 import AdminSidebar, {
   type AdminUser,
 } from "@/components/admin/sidebar";
@@ -48,39 +47,25 @@ export default function AdminShell({
     };
   }, [menuOpen]);
 
-  async function handleLogout() {
-    if (loggingOut) return;
-
-    setLoggingOut(true);
-    setLogoutError("");
-
-    try {
-      // baseURL là "/api" nên không thêm "/api" vào đây.
-      await apiClient.post("/auth/logout");
-
-      closeMenu();
-      router.replace("/login");
-      router.refresh();
-    } catch {
-      setLogoutError("Đăng xuất thất bại. Vui lòng thử lại.");
-    } finally {
-      setLoggingOut(false);
-    }
+  function handleLogout() {
+    closeMenu();
+    router.push("/"); // Chuyển thẳng về trang chủ website
   }
 
   return (
-    <div className="min-h-dvh bg-[#F6F7FB] text-slate-900 lg:flex">
+    <div className="min-h-dvh w-full bg-[#F6F7FB] text-slate-900 lg:flex">
       {/* Sidebar desktop */}
       <AdminSidebar
         user={user}
         loggingOut={loggingOut}
         logoutError={logoutError}
         onLogout={handleLogout}
-        className="sticky top-0 hidden h-dvh w-72 shrink-0 lg:flex"
+        className="sticky top-0 hidden h-dvh shrink-0 lg:flex"
       />
 
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-50 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-7 lg:px-10">
+          {/* Nhóm bên trái: Nút Menu mobile + Tiêu đề "Hệ Thống Quản Trị" */}
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -99,25 +84,20 @@ export default function AdminShell({
               )}
             </button>
 
-            <Link
-              href="/home"
-              className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-violet-700"
-            >
-              <ChevronLeft
-                aria-hidden="true"
-                className="h-4 w-4"
-              />
-              Xem website
-            </Link>
+            <span className="text-left text-[16px] font-bold text-slate-800">
+              Hệ Thống Quản Trị
+            </span>
           </div>
 
-          <span className="max-w-48 truncate text-sm font-semibold text-slate-700 lg:hidden">
-            {user.fullName}
-          </span>
-
-          <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:inline-flex">
-            Quản trị viên
-          </span>
+          {/* Nhóm bên phải: Tên người dùng (trên mobile) hoặc Badge (trên desktop) */}
+          <div className="flex items-center gap-3">
+            <span className="max-w-48 truncate text-sm font-semibold text-slate-700 lg:hidden">
+              {user.fullName}
+            </span>
+            <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:inline-flex">
+              Quản trị viên
+            </span>
+          </div>
         </header>
 
         {/* Sidebar mobile */}

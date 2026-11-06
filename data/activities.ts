@@ -7,6 +7,11 @@ export interface ActivityPost {
   category: ActivityCategory;
   updatedAt: string;
   image: string | null;
+  // MỚI: Đánh dấu bài viết nổi bật từ Admin
+  featured?: boolean;
+
+  // MỚI: Nội dung HTML từ Tiptap
+  contentHtml?: string;
   content: {
     heading: string;
     text: string;

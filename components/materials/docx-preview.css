@@ -1,0 +1,53 @@
+
+/* =====================================================
+   DOCX PREVIEW - FULL WIDTH
+   ===================================================== */
+
+/* Khung bao ngoài */
+.docx-preview-wrapper {
+    width: 100%;
+    min-height: 400px;
+    overflow-x: auto;
+    background: #ffffff;
+}
+
+/* Vùng chứa tài liệu */
+.docx-preview-container {
+    width: 100%;
+    padding: 0;
+    overflow-x: auto;
+    background: #ffffff;
+}
+
+/* Loại bỏ nền xám và khoảng cách mặc định */
+.docx-preview-container .docx-wrapper {
+    width: 100%;
+    padding: 0 !important;
+    background: #ffffff !important;
+}
+
+/* Mở rộng trang Word phủ toàn bộ chiều ngang */
+.docx-preview-container .docx-wrapper > section.docx {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 100%;
+    margin: 0 !important;
+
+    background: #ffffff !important;
+    box-shadow: none !important;
+
+    box-sizing: border-box;
+}
+
+/* Giữ hình ảnh không tràn khỏi khung */
+.docx-preview-container img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+    .docx-preview-container {
+        overflow-x: auto;
+    }
+}

@@ -31,53 +31,64 @@ export const adminNavigation: DashboardNavigationItem[] = [
 
     {
         key: "pages",
-        label: "Các trang",
+        label: " Quản trị Website",
         icon: PanelsTopLeft,
         children: [
+
             {
-                key: "pages-list",
-                label: "Danh sách trang",
-                href: "/admin/pages",
+                key: "home-page",
+                label: "Trang chủ",
+                href: "/admin/pages/home",
             },
             {
-                key: "pages-create",
-                label: "Thêm trang",
-                href: "/admin/pages/create",
-            },
-        ],
-    },
-    {
-        key: "materials",
-        label: "Tài liệu",
-        icon: FileText,
-        children: [
-            {
-                key: "materials-list",
-                label: "Danh sách tài liệu",
-                href: "/admin/materials",
+                key: "library-page",
+                label: "Tài liệu",
+                href: "/admin/pages/materials",
             },
             {
-                key: "materials-create",
-                label: "Thêm tài liệu",
-                href: "/admin/materials/create",
+                key: "flashcard-page",
+                label: "Flashcard",
+                href: "/admin/pages/flashcard",
             },
-        ],
-    },
-    {
-        key: "activities",
-        label: "Hoạt động",
-        icon: BookOpenText,
-        children: [
             {
-                key: "activities-list",
-                label: "Danh sách bài viết",
+                key: "activity-page",
+                label: "Hoạt động",
                 href: "/admin/activities",
             },
-            {
-                key: "activities-create",
-                label: "Thêm bài viết",
-                href: "/admin/activities/create",
-            },
         ],
     },
+    // {
+    //     key: "materials",
+    //     label: "Tài liệu",
+    //     icon: FileText,
+    //     children: [
+    //         {
+    //             key: "materials-list",
+    //             label: "Danh sách tài liệu",
+    //             href: "/admin/materials",
+    //         },
+    //         {
+    //             key: "materials-create",
+    //             label: "Thêm tài liệu",
+    //             href: "/admin/materials/create",
+    //         },
+    //     ],
+    // },
+    // {
+    //     key: "activities",
+    //     label: "Hoạt động",
+    //     icon: BookOpenText,
+    //     children: [
+    //         {
+    //             key: "activities-list",
+    //             label: "Danh sách bài viết",
+    //             href: "/admin/activities",
+    //         },
+    //         {
+    //             key: "activities-create",
+    //             label: "Thêm bài viết",
+    //             href: "/admin/activities/create",
+    //         },
+    //     ],
+    // },
 ];

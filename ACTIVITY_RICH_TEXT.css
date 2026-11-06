@@ -1,0 +1,18 @@
+/* Chép vào cuối app/globals.css hoặc stylesheet global đang được import. */
+.activity-rich-text { font-size: 1rem; line-height: 1.9; overflow-wrap: anywhere; }
+.activity-rich-text :is(h1,h2,h3,h4) { font-weight: 750; color: #0f172a; line-height: 1.35; margin: 1.5em 0 .65em; }
+.activity-rich-text h1 { font-size: 2rem; }
+.activity-rich-text h2 { font-size: 1.6rem; }
+.activity-rich-text h3 { font-size: 1.3rem; }
+.activity-rich-text h4 { font-size: 1.1rem; }
+.activity-rich-text p { margin: .85em 0; }
+.activity-rich-text ul { list-style: disc; padding-left: 1.7rem; }
+.activity-rich-text ol { list-style: decimal; padding-left: 1.7rem; }
+.activity-rich-text li { margin: .35em 0; }
+.activity-rich-text a { color: #5143ef; text-decoration: underline; }
+.activity-rich-text blockquote { border-left: 4px solid #ddd2f5; padding-left: 1rem; font-style: italic; }
+.activity-rich-text img { max-width: 100%; height: auto; border-radius: .75rem; margin: 1rem auto; }
+.activity-rich-text table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
+.activity-rich-text th, .activity-rich-text td { border: 1px solid #cbd5e1; padding: .5rem .75rem; }
+.activity-rich-text pre { padding: 1rem; background: #0f172a; color: white; overflow-x: auto; border-radius: .75rem; }
+.activity-rich-text hr { margin: 2rem 0; border-color: #cbd5e1; }

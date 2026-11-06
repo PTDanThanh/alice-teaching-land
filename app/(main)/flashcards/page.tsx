@@ -1,13 +1,6 @@
-import type { Metadata } from "next";
+import FlashcardCatalog from "@/components/flashcards/flashcard-catalog";
 
-import FlashcardWorkspace from "./flashcard-workspace";
-
-export const metadata: Metadata = {
-  title: "Flashcard | Alice In Teachingland",
-  description:
-    "Luyện tập và ghi nhớ từ vựng tiếng Anh, tiếng Pháp cùng Alice.",
-};
-
-export default function FlashcardPage() {
-  return <FlashcardWorkspace />;
+// Trang danh sách bộ từ vựng.
+export default function FlashcardsPage() {
+  return <FlashcardCatalog />;
 }

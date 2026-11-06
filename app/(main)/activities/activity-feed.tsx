@@ -11,11 +11,9 @@ import {
 } from "lucide-react";
 
 import {
-  activityPosts,
   activityCategoryLabels,
   featuredActivitySlug,
   formatActivityDate,
-  getActivityBySlug,
   type ActivityCategory,
   type ActivityPost,
 } from "@/data/activities";
@@ -75,15 +73,15 @@ function PostCover({
   );
 }
 
-export default function ActivityFeed() {
+export default function ActivityFeed({ posts }: { posts: ActivityPost[] }) {
   const [category, setCategory] = useState<CategoryFilter>("all");
 
-  const featuredPost = getActivityBySlug(featuredActivitySlug);
+  const featuredPost = posts.find((post) => post.featured) ?? posts.find((post) => post.slug === featuredActivitySlug);
 
-  const visiblePosts = activityPosts
+  const visiblePosts = posts
     .filter(
       (post) =>
-        post.slug !== featuredActivitySlug &&
+        post.slug !== featuredPost?.slug &&
         (category === "all" || post.category === category),
     )
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

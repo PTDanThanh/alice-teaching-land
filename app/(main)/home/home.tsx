@@ -3,13 +3,18 @@ import Intro from "./intro";
 import Document from "./document";
 import Flashcards from "./flashcard";
 
-export default function HomePage() {
+import { getHomeContent } from "@/src/services/content/page-content.service";
+
+export default async function Home() {
+    const content = await getHomeContent();
+    
+
     return (
-        <main>
-            <Hero />
-            <Intro />
+        <>
+            <Hero content={content.sections.hero} />
+            <Intro content={content.sections.intro} />
             <Document />
             <Flashcards />
-        </main>
+        </>
     );
 }

@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
     ArrowRight,
@@ -12,86 +13,129 @@ import {
 
 import { Button } from "@/components/ui/button";
 
-const documentGroupsFranch = [
+// Các trường cần sử dụng từ API /api/materials
+type MaterialItem = {
+    id?: string;
+    language: "en" | "fr";
+    type: string;
+};
+
+// Cấu hình giao diện, không chứa số lượng cố định
+const documentGroups = [
     {
         id: "word",
         label: "WORD",
         description: "Giáo trình, bài tập và tài liệu tham khảo",
-        count: 24,
         badgeClassName: "bg-[#5143EF]",
         borderClassName: "border-[#DDD7FF]",
-        href: "/documents?type=word",
     },
     {
         id: "powerpoint",
         label: "PowerPoint",
         description: "Bài giảng trực quan và dễ theo dõi",
-        count: 24,
         badgeClassName: "bg-[#FF3864]",
         borderClassName: "border-[#FFD5E2]",
-        href: "/documents?type=powerpoint",
     },
     {
         id: "pdf",
         label: "PDF",
         description: "Tài liệu thuận tiện để đọc và ôn luyện",
-        count: 24,
         badgeClassName: "bg-[#F5A000]",
         borderClassName: "border-[#FFE3CE]",
-        href: "/documents?type=pdf",
     },
-];
+] as const;
 
-const doccumentEnglish = [
+const slides = [
     {
-        id: "word",
-        label: "WORD",
-        description: "Giáo trình, bài tập tiếng Anh",
-        count: 24,
-        badgeClassName: "bg-[#5143EF]",
-        borderClassName: "border-[#DDD7FF]",
-        href: "/documents?type=word",
+        language: "en",
+        title: "Tài Liệu Học Tiếng Anh",
+        description:
+            "Tổng hợp tài liệu tiếng Anh hữu ích dưới nhiều định dạng như Word, PowerPoint và PDF, giúp bạn dễ dàng học tập và ôn luyện.",
     },
     {
-        id: "powerpoint",
-        label: "PowerPoint",
-        description: "Bài giảng chuyên ngành tiếng Anh",
-        count: 24,
-        badgeClassName: "bg-[#FF3864]",
-        borderClassName: "border-[#FFD5E2]",
-        href: "/documents?type=powerpoint",
+        language: "fr",
+        title: "Tài Liệu Học Tiếng Pháp",
+        description:
+            "Tổng hợp tài liệu tiếng Pháp hữu ích dưới nhiều định dạng như Word, PowerPoint và PDF, giúp bạn dễ dàng học tập và ôn luyện.",
     },
-    {
-        id: "pdf",
-        label: "PDF",
-        description: "Tài liệu ôn tiếng Anh",
-        count: 24,
-        badgeClassName: "bg-[#F5A000]",
-        borderClassName: "border-[#FFE3CE]",
-        href: "/documents?type=pdf",
-    },
-]
+] as const;
 
 export default function DocumentSection() {
-    const [slideIndex, setSlideIndex] = useState(0); //chia ra hai slide khác nhau 
+    const [slideIndex, setSlideIndex] = useState(0);
 
-    const slides = [
-        {
-            language: "en",
-            title: "Tài Liệu Học Tiếng Anh",
-            description:
-                "Tổng hợp tài liệu tiếng Anh hữu ích dưới nhiều định dạng như Word, PowerPoint và PDF, giúp bạn dễ dàng học tập và ôn luyện.",
-            groups: doccumentEnglish,
-        },
-        {
-            language: "fr",
-            title: "Tài Liệu Học Tiếng Pháp",
-            description:
-                "Tổng hợp tài liệu tiếng Pháp hữu ích dưới nhiều định dạng như Word, PowerPoint và PDF, giúp bạn dễ dàng học tập và ôn luyện.",
-            groups: documentGroupsFranch,
-        },
+    // Dữ liệu thực tế lấy từ trang Thư viện tài liệu
+    const [materials, setMaterials] = useState<MaterialItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
-    ];
+    useEffect(() => {
+        const controller = new AbortController();
+
+        async function loadMaterials() {
+            try {
+                setLoading(true);
+                setLoadError(null);
+
+                // Dùng cùng API với trang /materials
+                const response = await fetch("/api/materials", {
+                    cache: "no-store",
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error("Không thể tải danh sách tài liệu.");
+                }
+
+                const data: unknown = await response.json();
+
+                // API hiện tại trả về mảng tài liệu trực tiếp
+                if (!Array.isArray(data)) {
+                    throw new Error("Dữ liệu tài liệu không hợp lệ.");
+                }
+
+                // Chỉ giữ những trường cần thiết
+                const validMaterials: MaterialItem[] = data.filter(
+                    (item): item is MaterialItem =>
+                        typeof item === "object" &&
+                        item !== null &&
+                        ("language" in item) &&
+                        (item.language === "en" || item.language === "fr") &&
+                        ("type" in item) &&
+                        typeof item.type === "string",
+                );
+
+                if (!controller.signal.aborted) {
+                    setMaterials(validMaterials);
+                }
+            } catch (error) {
+                if (controller.signal.aborted) return;
+
+                console.error("[DocumentSection]", error);
+                setLoadError("Không thể tải dữ liệu tài liệu.");
+                setMaterials([]);
+            } finally {
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        void loadMaterials();
+
+        return () => controller.abort();
+    }, []);
+
+    // Tính số lượng tài liệu theo ngôn ngữ và định dạng
+    const materialCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+
+        for (const material of materials) {
+            const key = `${material.language}:${material.type}`;
+            counts[key] = (counts[key] ?? 0) + 1;
+        }
+
+        return counts;
+    }, [materials]);
 
     return (
         <section
@@ -99,115 +143,174 @@ export default function DocumentSection() {
             className="bg-white px-4 py-12 sm:px-6 lg:py-16"
         >
             <div className="relative mx-auto max-w-6xl">
-                {/* Mũi tên cố định, nội dung trượt bên dưới */}
+                {/* Nút chuyển sang slide trước */}
                 <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     disabled={slideIndex === 0}
-                    onClick={() => setSlideIndex(0)}
-                    aria-label="Xem tài liệu tiếng Pháp"
+                    onClick={() =>
+                        setSlideIndex((current) => Math.max(0, current - 1))
+                    }
+                    aria-label="Xem slide tài liệu trước"
                     className="absolute left-0 top-0 z-10 rounded-full text-[#5143EF] hover:bg-[#F6F3FF]"
                 >
-                    <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+                    <ChevronLeft
+                        className="h-6 w-6"
+                        aria-hidden="true"
+                    />
                 </Button>
 
+                {/* Nút chuyển sang slide tiếp theo */}
                 <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     disabled={slideIndex === slides.length - 1}
-                    onClick={() => setSlideIndex(1)}
-                    aria-label="Xem tài liệu tiếng Anh"
+                    onClick={() =>
+                        setSlideIndex((current) =>
+                            Math.min(slides.length - 1, current + 1),
+                        )
+                    }
+                    aria-label="Xem slide tài liệu tiếp theo"
                     className="absolute right-0 top-0 z-10 rounded-full text-[#5143EF] hover:bg-[#F6F3FF]"
                 >
-                    <ChevronRight className="h-6 w-6" aria-hidden="true" />
+                    <ChevronRight
+                        className="h-6 w-6"
+                        aria-hidden="true"
+                    />
                 </Button>
 
+                {/* Giữ nguyên hiệu ứng trượt của giao diện cũ */}
                 <div className="overflow-hidden">
                     <div
                         className="flex transition-transform duration-500 ease-in-out motion-reduce:transition-none"
                         style={{
-                            transform: `translateX(-${slideIndex * 100}%)`, //hiệu ứng trược
+                            transform: `translateX(-${slideIndex * 100}%)`,
                         }}
                     >
-                        {slides.map((slide, index) => (
-                            <div
-                                key={slide.language}
-                                inert={slideIndex !== index}
-                                aria-hidden={slideIndex !== index}
-                                className="w-full min-w-0 shrink-0"
-                            >
-                                <div className="text-center">
-                                    <h2 className="px-12 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                                        {slide.title}
-                                    </h2>
+                        {slides.map((slide, index) => {
+                            const total = materials.filter(
+                                (item) => item.language === slide.language,
+                            ).length;
 
-                                    <p className="mx-auto mt-3 max-w-4xl text-sm leading-6 text-slate-500 sm:text-base">
-                                        {slide.description}
-                                    </p>
-                                </div>
+                            return (
+                                <div
+                                    key={slide.language}
+                                    inert={slideIndex !== index}
+                                    aria-hidden={slideIndex !== index}
+                                    className="w-full min-w-0 shrink-0"
+                                >
+                                    {/* Tiêu đề slide */}
+                                    <div className="text-center">
+                                        <h2 className="px-12 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                                            {slide.title}
+                                        </h2>
 
-                                <div className="mt-10 grid grid-cols-1 gap-5 md:mt-14 md:grid-cols-3">
-                                    {slide.groups.map((group) => (
-                                        <article
-                                            key={group.id}
-                                            className={`flex flex-col rounded-2xl border bg-[#F6F3FF] p-5 sm:p-6 ${group.borderClassName}`}
-                                        >
-                                            <div className="flex items-start justify-between gap-4">
-                                                <span
-                                                    className={`inline-flex rounded-md px-3 py-1 text-xs font-bold text-white ${group.badgeClassName}`}
-                                                >
-                                                    {group.label}
-                                                </span>
+                                        <p className="mx-auto mt-3 max-w-4xl text-sm leading-6 text-slate-500 sm:text-base">
+                                            {slide.description}
+                                        </p>
 
-                                                <File
-                                                    aria-hidden="true"
-                                                    strokeWidth={1.5}
-                                                    className="h-9 w-9 shrink-0 text-black"
-                                                />
-                                            </div>
-
-                                            <p className="mt-3 text-sm leading-6 text-slate-600">
-                                                {group.description}
+                                        {/* {!loading && !loadError && (
+                                            <p className="mt-3 text-sm font-medium text-[#5143EF]">
+                                                Hiện có {total} tài liệu
                                             </p>
+                                        )} */}
+                                    </div>
 
-                                            <div className="mt-3">
-                                                <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600 shadow-sm">
-                                                    <FileText
-                                                        aria-hidden="true"
-                                                        className="h-4 w-4 text-slate-900"
-                                                    />
-                                                    {group.count} tài liệu
-                                                </span>
-                                            </div>
+                                    {/* Ba nhóm tài liệu */}
+                                    <div className="mt-10 grid grid-cols-1 gap-5 md:mt-14 md:grid-cols-3">
+                                        {documentGroups.map((group) => {
+                                            // Số lượng thực tế theo ngôn ngữ + loại
+                                            const count =
+                                                materialCounts[
+                                                `${slide.language}:${group.id}`
+                                                ] ?? 0;
 
-                                            <div className="mt-auto pt-6">
-                                                <Button
-                                                    asChild
-                                                    className="mx-auto flex h-9 w-full max-w-60 rounded-lg bg-[#5143EF] text-white hover:bg-[#4435DC]"
+                                            return (
+                                                <article
+                                                    key={group.id}
+                                                    className={`flex flex-col rounded-2xl border bg-[#F6F3FF] p-5 sm:p-6 ${group.borderClassName}`}
                                                 >
-                                                    <Link
-                                                        href={`${group.href}&language=${slide.language}`}
-                                                        aria-label={`Xem ${group.label} — ${slide.title}`}
-                                                    >
-                                                        Xem Tài Liệu
-                                                        <ArrowRight
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <span
+                                                            className={`inline-flex rounded-md px-3 py-1 text-xs font-bold text-white ${group.badgeClassName}`}
+                                                        >
+                                                            {group.label}
+                                                        </span>
+
+                                                        <File
                                                             aria-hidden="true"
-                                                            className="ml-2 h-5 w-5"
+                                                            strokeWidth={1.5}
+                                                            className="h-9 w-9 shrink-0 text-black"
                                                         />
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                        </article>
-                                    ))}
+                                                    </div>
+
+                                                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                                                        {group.description}
+                                                    </p>
+
+                                                    {/* Số lượng từ MongoDB */}
+                                                    <div className="mt-3">
+                                                        <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-2.5 py-1 text-xs text-slate-600 shadow-sm">
+                                                            <FileText
+                                                                aria-hidden="true"
+                                                                className="h-4 w-4 text-slate-900"
+                                                            />
+
+                                                            {loading
+                                                                ? "Đang tải..."
+                                                                : loadError
+                                                                    ? "Chưa tải được"
+                                                                    : `${count} tài liệu`}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Điều hướng đến đúng trang tài liệu */}
+                                                    <div className="mt-auto pt-6">
+                                                        <Button
+                                                            asChild
+                                                            className="mx-auto flex h-9 w-full max-w-60 rounded-lg bg-[#5143EF] text-white hover:bg-[#4435DC]"
+                                                        >
+                                                            <Link
+                                                                href={`/materials?type=${group.id}&language=${slide.language}`}
+                                                                aria-label={`Xem ${group.label} — ${slide.title}`}
+                                                            >
+                                                                Xem Tài Liệu
+
+                                                                <ArrowRight
+                                                                    aria-hidden="true"
+                                                                    className="ml-2 h-5 w-5"
+                                                                />
+                                                            </Link>
+                                                        </Button>
+                                                    </div>
+                                                </article>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
 
-                <p className="sr-only" role="status" aria-atomic="true">
+                {/* Thông báo lỗi nếu API không hoạt động */}
+                {loadError && (
+                    <p
+                        role="alert"
+                        className="mt-5 text-center text-sm text-red-600"
+                    >
+                        {loadError}
+                    </p>
+                )}
+
+                {/* Thông báo slide hiện tại cho trình đọc màn hình */}
+                <p
+                    className="sr-only"
+                    role="status"
+                    aria-atomic="true"
+                >
                     {slides[slideIndex].title}
                 </p>
             </div>

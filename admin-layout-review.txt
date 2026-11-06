@@ -1,0 +1,520 @@
+===== ADMIN ACTIVITIES PAGE =====
+import Link from "next/link";
+import { ArrowUpRight, BookOpenText } from "lucide-react";
+
+import { activityCategoryLabels, activityPosts, formatActivityDate } from "@/data/activities";
+
+export default function AdminActivitiesPage() {
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-violet-700">NỘI DUNG HỌC TẬP</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Hoạt động</h1>
+          <p className="mt-2 text-sm text-slate-500">{activityPosts.length} bài viết trong dữ liệu hiện tại.</p>
+        </div>
+        <Link href="/activities" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-800">
+          Xem trang hoạt động <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+        </Link>
+      </header>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {activityPosts.map((post) => (
+          <article key={post.slug} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><BookOpenText aria-hidden="true" className="h-5 w-5" /></span>
+              <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">{activityCategoryLabels[post.category]}</span>
+            </div>
+            <h2 className="mt-4 font-bold leading-6 text-slate-900">{post.title}</h2>
+            <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-500">{post.excerpt}</p>
+            <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
+              <time dateTime={post.updatedAt} className="text-xs text-slate-500">Cập nhật {formatActivityDate(post.updatedAt)}</time>
+              <Link href={`/activities/${post.slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-700 hover:text-violet-900">
+                Xem bài <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+              </Link>
+            </div>
+          </article>
+        ))}
+      </div>
+      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">Các bài viết hiện được lưu trong mã nguồn. Chức năng chỉnh sửa và xuất bản từ dashboard cần kết nối CMS hoặc MongoDB trước.</p>
+    </div>
+  );
+}
+===== DASHBOARD LAYOUT =====
+import type { ReactNode } from "react";
+
+import AdminShell from "@/components/admin/admin-shell";
+import { requireAdmin } from "@/lib/auth/admin";
+
+export default async function DashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const user = await requireAdmin();
+
+  return <AdminShell user={user}>{children}</AdminShell>;
+}
+===== ADMIN SHELL =====
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { ChevronLeft, Menu, X } from "lucide-react";
+
+import AdminSidebar, {
+  type AdminUser,
+} from "@/components/admin/sidebar";
+
+type AdminShellProps = {
+  children: ReactNode;
+  user: AdminUser;
+};
+
+export default function AdminShell({
+  children,
+  user,
+}: AdminShellProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const [menuPath, setMenuPath] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+
+  const menuOpen = menuPath === pathname;
+
+  function closeMenu() {
+    setMenuPath(null);
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuPath(null);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
+  function handleLogout() {
+    closeMenu();
+    router.push("/"); // Chuyển thẳng về trang chủ website
+  }
+
+  return (
+    <div className="min-h-dvh w-full bg-[#F6F7FB] text-slate-900 lg:flex">
+      {/* Sidebar desktop */}
+      <AdminSidebar
+        user={user}
+        loggingOut={loggingOut}
+        logoutError={logoutError}
+        onLogout={handleLogout}
+        className="sticky top-0 hidden h-dvh shrink-0 lg:flex"
+      />
+
+      <div className="min-w-0 flex-1">
+        <header className="sticky top-0 z-50 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-7 lg:px-10">
+          {/* Nhóm bên trái: Nút Menu mobile + Tiêu đề "Hệ Thống Quản Trị" */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
+              aria-expanded={menuOpen}
+              aria-controls="admin-mobile-navigation"
+              onClick={() =>
+                setMenuPath(menuOpen ? null : pathname)
+              }
+              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-violet-500 lg:hidden"
+            >
+              {menuOpen ? (
+                <X aria-hidden="true" className="h-5 w-5" />
+              ) : (
+                <Menu aria-hidden="true" className="h-5 w-5" />
+              )}
+            </button>
+
+            <span className="text-left text-[16px] font-bold text-slate-800">
+              Hệ Thống Quản Trị
+            </span>
+          </div>
+
+          {/* Nhóm bên phải: Tên người dùng (trên mobile) hoặc Badge (trên desktop) */}
+          <div className="flex items-center gap-3">
+            <span className="max-w-48 truncate text-sm font-semibold text-slate-700 lg:hidden">
+              {user.fullName}
+            </span>
+            <span className="hidden rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:inline-flex">
+              Quản trị viên
+            </span>
+          </div>
+        </header>
+
+        {/* Sidebar mobile */}
+        <div
+          id="admin-mobile-navigation"
+          hidden={!menuOpen}
+          className="fixed inset-x-0 bottom-0 top-16 z-40 lg:hidden"
+        >
+          <AdminSidebar
+            user={user}
+            loggingOut={loggingOut}
+            logoutError={logoutError}
+            onLogout={handleLogout}
+            onNavigate={closeMenu}
+            className="h-full w-full"
+          />
+        </div>
+
+        <main className="mx-auto w-full max-w-[1600px] p-4 sm:p-7 lg:p-10">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}===== ADMIN SIDEBAR =====
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { BookOpenText, ChevronDown, LogOut, Pin, PinOff } from "lucide-react";
+
+import {
+  adminNavigation,
+  type DashboardNavigationItem,
+} from "@/lib/dashboard/navigation";
+
+export type AdminUser = {
+  fullName: string;
+  email: string;
+};
+
+type AdminSidebarProps = {
+  user: AdminUser;
+  loggingOut: boolean;
+  logoutError?: string;
+  onLogout: () => void;
+  onNavigate?: () => void;
+  className?: string;
+};
+
+function matchesPath(pathname: string, href: string) {
+  return (
+    pathname === href ||
+    (href !== "/admin" && pathname.startsWith(`${href}/`))
+  );
+}
+
+function getActiveKey(
+  items: DashboardNavigationItem[],
+  pathname: string,
+): string | null {
+  let activeKey: string | null = null;
+  let longestMatch = -1;
+
+  function visit(entries: DashboardNavigationItem[]) {
+    for (const item of entries) {
+      if (
+        item.href &&
+        matchesPath(pathname, item.href) &&
+        item.href.length > longestMatch
+      ) {
+        activeKey = item.key;
+        longestMatch = item.href.length;
+      }
+
+      if (item.children) {
+        visit(item.children);
+      }
+    }
+  }
+
+  visit(items);
+  return activeKey;
+}
+
+function containsActiveItem(
+  item: DashboardNavigationItem,
+  activeKey: string | null,
+): boolean {
+  return (
+    item.key === activeKey ||
+    Boolean(
+      item.children?.some((child) =>
+        containsActiveItem(child, activeKey),
+      ),
+    )
+  );
+}
+
+type NavigationItemProps = {
+  item: DashboardNavigationItem;
+  activeKey: string | null;
+  pathname: string;
+  onNavigate?: () => void;
+  isCollapsed?: boolean;
+};
+
+function NavigationItem({
+  item,
+  activeKey,
+  pathname,
+  onNavigate,
+  isCollapsed = false,
+}: NavigationItemProps) {
+  const branchActive = containsActiveItem(item, activeKey);
+
+  const [expansion, setExpansion] = useState<{
+    pathname: string;
+    open: boolean;
+  } | null>(null);
+
+  const open =
+    expansion?.pathname === pathname
+      ? expansion.open
+      : branchActive;
+
+  const Icon = item.icon;
+  const hasChildren = Boolean(item.children?.length);
+  const active = item.key === activeKey;
+
+  const baseClass =
+    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300";
+
+  if (hasChildren) {
+    const panelId = `admin-menu-${item.key}`;
+
+    return (
+      <li>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() =>
+            setExpansion({ pathname, open: !open })
+          }
+          title={isCollapsed ? item.label : undefined}
+          className={`${baseClass} ${branchActive
+            ? "bg-white/10 text-white"
+            : "text-violet-100 hover:bg-white/10"
+            } ${isCollapsed ? "justify-center px-2" : ""}`}
+        >
+          {Icon && (
+            <Icon
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0"
+            />
+          )}
+
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 text-left truncate">{item.label}</span>
+              <ChevronDown
+                aria-hidden="true"
+                className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""
+                  }`}
+              />
+            </>
+          )}
+        </button>
+
+        {!isCollapsed && (
+          <ul
+            id={panelId}
+            hidden={!open}
+            className="ml-5 mt-2 space-y-1 border-l border-white/15 pl-3"
+          >
+            {item.children!.map((child) => (
+              <NavigationItem
+                key={child.key}
+                item={child}
+                activeKey={activeKey}
+                pathname={pathname}
+                onNavigate={onNavigate}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  }
+
+  if (!item.href) return null;
+
+  return (
+    <li>
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        aria-current={pathname === item.href ? "page" : undefined}
+        title={isCollapsed ? item.label : undefined}
+        className={`${baseClass} ${active
+          ? "bg-violet-600 text-white shadow-lg shadow-violet-950/20"
+          : "text-violet-100 hover:bg-white/10 hover:text-white"
+          } ${isCollapsed ? "justify-center px-2" : ""}`}
+      >
+        {Icon && (
+          <Icon
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0"
+          />
+        )}
+
+        {!isCollapsed && <span className="truncate">{item.label}</span>}
+      </Link>
+    </li>
+  );
+}
+
+export default function AdminSidebar({
+  user,
+  loggingOut,
+  logoutError,
+  onLogout,
+  onNavigate,
+  className = "",
+}: AdminSidebarProps) {
+  const pathname = usePathname();
+  const activeKey = getActiveKey(adminNavigation, pathname);
+
+  // Khởi tạo trực tiếp trạng thái ghim từ localStorage
+  const [isPinned, setIsPinned] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const savedPinState = localStorage.getItem("admin_sidebar_pinned");
+    return savedPinState !== null ? savedPinState === "true" : true;
+  });
+
+  const [isHovered, setIsHovered] = useState(false);
+
+  function togglePin() {
+    const nextState = !isPinned;
+    setIsPinned(nextState);
+    localStorage.setItem("admin_sidebar_pinned", String(nextState));
+  }
+
+  // Nếu không ghim và không rê chuột vào thì thu gọn lại
+  const isCollapsed = !isPinned && !isHovered;
+
+  return (
+    <aside
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ width: isCollapsed ? "5rem" : "18rem" }} // Dùng trực tiếp style width để ép trình duyệt co giãn chính xác 100%
+      className={`flex flex-col overflow-hidden border-r border-white/10 bg-linear-to-b from-[#281955] via-[#24164B] to-[#1D143A] p-4 text-white transition-all duration-300 ease-in-out ${className}`}
+    >
+      {/* Header Logo */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <Link
+          href="/admin"
+          onClick={onNavigate}
+          className={`flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-white/5 ${isCollapsed ? "justify-center w-full" : "w-full"
+            }`}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-violet-400 to-violet-600 shadow-lg shadow-violet-950/30">
+            <BookOpenText aria-hidden="true" className="h-5 w-5" />
+          </span>
+
+          {!isCollapsed && (
+            <div className="truncate">
+              <span className="block text-sm font-bold tracking-wide">
+                Alice Studio
+              </span>
+              <span className="mt-0.5 block text-xs text-violet-200">
+                Admin workspace
+              </span>
+            </div>
+            
+          )}
+          
+        </Link>
+      </div>
+
+      {/* Nút bấm Ghim / Bỏ ghim */}
+      <div className={`mt-3 flex ${isCollapsed ? "justify-center" : "justify-end px-1"}`}>
+        <button
+          type="button"
+          onClick={togglePin}
+          title={isPinned ? "Bỏ ghim sidebar (Thu gọn)" : "Ghim sidebar"}
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-violet-200 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          {isPinned ? (
+            <>
+              <PinOff aria-hidden="true" className="h-4 w-4 shrink-0" />
+              {!isCollapsed}
+            </>
+          ) : (
+            <>
+              <Pin aria-hidden="true" className="h-4 w-4 shrink-0" />
+              {!isCollapsed}
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Danh sách Menu */}
+      <div className="min-h-0 flex-1 overflow-y-auto py-3 scrollbar-none">
+        <nav aria-label="Điều hướng quản trị">
+          <ul className="space-y-1.5">
+            {adminNavigation.map((item) => (
+              <NavigationItem
+                key={item.key}
+                item={item}
+                activeKey={activeKey}
+                pathname={pathname}
+                onNavigate={onNavigate}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </ul>
+        </nav>
+      </div>
+
+      {/* Footer / Thông tin tài khoản & nút quay về */}
+      <div className="shrink-0 rounded-2xl border border-white/10 bg-white/6 p-3 shadow-lg shadow-black/10">
+        {!isCollapsed ? (
+          <div className="truncate">
+            <p className="truncate text-sm font-semibold">
+              {user.fullName}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-violet-200">
+              {user.email}
+            </p>
+          </div>
+        ) : (
+          <div className="flex justify-center" title={user.fullName}>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
+              {user.fullName.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={onLogout}
+          disabled={loggingOut}
+          title="Quay về website"
+          className={`mt-3 cursor-pointer flex items-center gap-2 rounded-lg py-2 text-sm text-violet-100 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 ${isCollapsed ? "justify-center px-0" : "w-full px-2 text-left"
+            }`}
+        >
+          <LogOut aria-hidden="true" className="h-4 w-4 shrink-0" />
+          {!isCollapsed && <span className="truncate">{loggingOut ? "Đang tải…" : "Quay về website"}</span>}
+        </button>
+
+        {logoutError && !isCollapsed && (
+          <p role="alert" className="mt-2 text-xs text-red-200">
+            {logoutError}
+          </p>
+        )}
+      </div>
+    </aside>
+  );
+}
