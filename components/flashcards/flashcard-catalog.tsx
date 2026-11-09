@@ -36,6 +36,23 @@ export default function FlashcardCatalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  //bộ lọc trình độ
+  const [level, setLevel] = useState("all");
+  // Lấy danh sách trình độ thực tế theo ngôn ngữ đang chọn
+  const levels = useMemo(() => {
+    const uniqueLevels = new Set(
+      rows
+        .filter((item) => item.language === language)
+        .map((item) => item.level?.trim())
+        .filter((level): level is string => Boolean(level)),
+    );
+
+    // Sắp xếp trình độ theo thứ tự A1, A2, B1, B2, C1, C2
+    return Array.from(uniqueLevels).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
+  }, [rows, language]);
+
   // Tải bộ thẻ đã xuất bản từ Public API.
   useEffect(() => {
     const controller = new AbortController();
@@ -97,14 +114,26 @@ export default function FlashcardCatalog() {
   const sets = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase();
 
-    return rows.filter(
-      (set) =>
-        set.language === language &&
-        [set.title, set.description, set.level].some((value) =>
-          (value ?? "").toLocaleLowerCase().includes(keyword),
-        ),
-    );
-  }, [rows, language, search]);
+    return rows.filter((set) => {
+      const matchLanguage = set.language === language;
+
+      const matchLevel =
+        level === "all" ||
+        set.level.trim().toUpperCase() === level.toUpperCase();
+
+      const matchSearch = [
+        set.title,
+        set.description,
+        set.level,
+      ].some((value) =>
+        (value ?? "").toLocaleLowerCase().includes(keyword),
+      );
+
+      return matchLanguage && matchLevel && matchSearch;
+    });
+  }, [rows, language, level, search]);
+
+
 
   return (
     <main className="min-h-screen bg-white">
@@ -149,13 +178,63 @@ export default function FlashcardCatalog() {
 
           <div
             aria-hidden="true"
-            className="relative flex h-36 w-52 items-center justify-center"
+            className="relative flex h-48 w-72 shrink-0 items-center justify-center sm:w-80"
           >
-            <div className="absolute h-28 w-36 -rotate-12 rounded-3xl bg-violet-200" />
-            <div className="absolute h-28 w-36 rotate-12 rounded-3xl bg-violet-100" />
+            {/* Card bên trái - nghiêng sang trái */}
+            <div
+              className="
+      absolute left-5 top-7 z-0
+      h-36 w-28 -rotate-12
+      overflow-hidden rounded-2xl
+      border border-violet-200
+      bg-violet-100 shadow-md
+      transition-transform duration-500
+      hover:-rotate-6 hover:-translate-x-2
+    "
+            >
+              {/* Chèn ảnh bên trái tại đây */}
+              <img
+                src="/images/flashcard-left.png"
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            </div>
 
-            <div className="relative flex h-32 w-40 flex-col items-center justify-center rounded-3xl bg-white shadow-lg shadow-violet-100">
-              <Sparkles className="h-7 w-7 text-violet-500" />
+            {/* Card bên phải - nghiêng sang phải */}
+            <div
+              className="
+      absolute right-5 top-5 z-10
+      h-36 w-28 rotate-12
+      overflow-hidden rounded-2xl
+      border border-violet-200
+      bg-violet-100 shadow-md
+      transition-transform duration-500
+      hover:rotate-6 hover:translate-x-2
+    "
+            >
+              {/* Chèn ảnh bên phải tại đây */}
+              <img
+                src="/images/flashcard-right.png"
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            </div>
+
+            {/* Card chính ở giữa */}
+            <div
+              className="
+      relative z-20 flex h-36 w-36
+      flex-col items-center justify-center
+      rounded-3xl border border-violet-100
+      bg-white shadow-xl shadow-violet-200/50
+      transition-transform duration-500
+      hover:-translate-y-2
+    "
+            >
+              <Sparkles
+                aria-hidden="true"
+                className="h-7 w-7 text-violet-500"
+              />
 
               <strong className="mt-2 text-lg text-[#5143EF]">
                 Bonjour
@@ -190,12 +269,33 @@ export default function FlashcardCatalog() {
               className="w-full rounded-2xl border border-violet-100 bg-white py-3.5 pl-12 pr-4 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             />
           </div>
+          {/* Dropdown lọc theo trình độ */}
+          <div className="w-full sm:w-44">
+            <label htmlFor="flashcard-level" className="sr-only">
+              Lọc theo trình độ
+            </label>
+
+            <select
+              id="flashcard-level"
+              value={level}
+              onChange={(event) => setLevel(event.target.value)}
+              className="h-12 -ms-4 w-full cursor-pointer rounded-xl border border-violet-100 bg-white px-4 text-sm font-medium text-slate-700 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            >
+              <option value="all">Tất cả trình độ</option>
+
+              {levels.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Bộ lọc ngôn ngữ */}
           <div
             role="group"
             aria-label="Lọc theo ngôn ngữ"
-            className="flex gap-2 rounded-2xl bg-[#F6F3FF] p-1.5"
+            className="flex gap-2 rounded-3xl bg-[#F6F3FF] p-1.5"
           >
             {(
               [
@@ -210,6 +310,7 @@ export default function FlashcardCatalog() {
                 onClick={() => {
                   setLanguage(item.value);
                   setSearch("");
+                  setLevel("all"); // Reset bộ lọc trình độ khi đổi ngôn ngữ
                 }}
                 className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${language === item.value
                   ? "bg-[#5143EF] text-white shadow-sm"
@@ -223,14 +324,41 @@ export default function FlashcardCatalog() {
         </div>
 
 
-
-        {/* Trạng thái đang tải */}
+        {/* Loading Skeleton - mô phỏng các card Flashcard */}
         {loading ? (
           <div
             role="status"
-            className="mt-8 rounded-3xl  px-6 py-16 text-center text-sm text-slate-500"
+            aria-label="Đang tải danh sách Flashcard"
+            aria-busy="true"
+            className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
           >
-            Đang tải bộ từ vựng...
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                aria-hidden="true"
+                className="overflow-hidden rounded-3xl border border-violet-100 bg-white shadow-sm"
+              >
+                {/* Skeleton ảnh đại diện */}
+                <div className="flex h-44 items-center justify-center bg-[#F6F3FF]">
+                  <div className="h-24 w-28 animate-pulse rounded-2xl bg-violet-100 motion-reduce:animate-none" />
+                </div>
+
+                {/* Skeleton nội dung */}
+                <div className="space-y-4 p-5">
+                  {/* Nhãn bộ từ vựng */}
+                  <div className="h-3 w-24 animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+
+                  {/* Tiêu đề */}
+                  <div className="h-6 w-3/4 animate-pulse rounded bg-slate-200 motion-reduce:animate-none" />
+
+                  {/* Mô tả */}
+                  <div className="space-y-2">
+                    <div className="h-3 w-full animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+                    <div className="h-3 w-5/6 animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           // Lỗi API: không hiển thị nhầm thành danh sách rỗng.
@@ -292,11 +420,6 @@ export default function FlashcardCatalog() {
                   <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500">
                     {set.description}
                   </p>
-
-                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#5143EF]">
-                    Bắt đầu học
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </span>
                 </div>
               </Link>
             ))}

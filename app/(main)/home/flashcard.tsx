@@ -135,7 +135,7 @@ export default function FlashcardSection() {
             <div className="mx-auto max-w-7xl">
                 {/* Tiêu đề: giữ nguyên giao diện cũ */}
                 <div className="text-center">
-                    <span className="inline-flex rounded-full bg-[#EBE6FF] px-3 py-1 text-xs font-medium text-[#5143EF]">
+                    <span className=" mt-3 inline-flex rounded-full bg-[#EBE6FF] px-3 py-1 text-xs font-medium text-[#5143EF]">
                         HỌC VỚI FLASHCARD
                     </span>
 
@@ -170,8 +170,8 @@ export default function FlashcardSection() {
                                 aria-pressed={language === item.value}
                                 onClick={() => changeLanguage(item.value)}
                                 className={`rounded-full px-5 ${language === item.value
-                                        ? "bg-[#5143EF] text-white hover:bg-[#4435DC] hover:text-white"
-                                        : "text-slate-600 hover:bg-[#F6F3FF]"
+                                    ? "bg-[#5143EF] text-white hover:bg-[#4435DC] hover:text-white"
+                                    : "text-slate-600 hover:bg-[#F6F3FF]"
                                     }`}
                             >
                                 {item.label}
@@ -216,9 +216,20 @@ export default function FlashcardSection() {
                                         </p>
                                     </div>
 
-                                    <span className="shrink-0 rounded-full bg-[#F0ECFF] px-2.5 py-1 text-xs font-medium text-[#5143EF]">
-                                        {selectedSet.level}
-                                    </span>
+                                    {/* Liên kết đến trang /flashcards */}
+                                    <div className="mt-4 flex justify-end">
+                                        <Link
+                                            href="/flashcards"
+                                            className="inline-flex items-center gap-2 text-sm font-semibold text-[#5143EF] hover:underline"
+                                        >
+                                            Xem tất cả bộ từ vựng
+
+                                            <ExternalLink
+                                                aria-hidden="true"
+                                                className="h-4 w-4"
+                                            />
+                                        </Link>
+                                    </div>
                                 </div>
 
                                 {/* Xem trước bộ thẻ thực tế */}
@@ -236,6 +247,7 @@ export default function FlashcardSection() {
                                     <h4 className="max-w-lg text-xl font-extrabold text-slate-900">
                                         {selectedSet.title}
                                     </h4>
+
 
                                     <p className="mt-3 max-w-md text-sm leading-7 text-slate-600">
                                         {selectedSet.description}
@@ -268,19 +280,7 @@ export default function FlashcardSection() {
                                     </Button>
                                 </div>
 
-                                <div className="mt-4 flex justify-end">
-                                    <Link
-                                        href="/flashcards"
-                                        className="inline-flex items-center gap-2 text-sm font-semibold text-[#5143EF] hover:underline"
-                                    >
-                                        Xem tất cả bộ từ vựng
 
-                                        <ExternalLink
-                                            aria-hidden="true"
-                                            className="h-4 w-4"
-                                        />
-                                    </Link>
-                                </div>
                             </>
                         ) : (
                             <div className="flex min-h-[360px] flex-col items-center justify-center px-6 text-center">
@@ -310,18 +310,18 @@ export default function FlashcardSection() {
                     {/* Cột phải: danh sách bộ thẻ thật */}
                     <aside
                         aria-label="Danh sách bộ từ vựng"
-                        className="w-full rounded-2xl border border-[#EAE5F5] bg-white p-4 shadow-sm"
+                        className="w-full rounded-2xl  bg-white p-4 "
                     >
                         <div className="flex items-center justify-between gap-3">
                             <h3 className="font-semibold text-slate-900">
                                 Chọn bộ từ vựng
                             </h3>
 
-                            {!loading && !error && (
+                            {/* {!loading && !error && (
                                 <span className="rounded-full bg-[#EBE6FF] px-2.5 py-1 text-xs font-semibold text-[#5143EF]">
                                     {sets.length} bộ
                                 </span>
-                            )}
+                            )} */}
                         </div>
 
                         <div className="mt-4 max-h-[650px] space-y-3 overflow-y-auto pr-1">
@@ -338,14 +338,14 @@ export default function FlashcardSection() {
                                             onClick={() => setSelectedId(item._id)}
                                             aria-pressed={active}
                                             className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5143EF] ${active
-                                                    ? "border-[#DDD7FF] bg-[#F6F3FF]"
-                                                    : "border-slate-200 hover:bg-slate-50"
+                                                ? "border-[#DDD7FF] bg-[#F6F3FF]"
+                                                : "border-slate-200 hover:bg-slate-50"
                                                 }`}
                                         >
                                             <span
                                                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${active
-                                                        ? "bg-[#5143EF] text-white"
-                                                        : "bg-slate-100 text-slate-600"
+                                                    ? "bg-[#5143EF] text-white"
+                                                    : "bg-slate-100 text-slate-600"
                                                     }`}
                                             >
                                                 {index + 1}

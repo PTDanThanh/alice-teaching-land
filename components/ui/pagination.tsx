@@ -59,7 +59,7 @@ export default function Pagination({
     return (
         <nav
             aria-label="Phân trang"
-            className={`mt-8 flex flex-wrap items-center justify-center gap-2 ${className}`}
+            className={`flex w-full shrink-0 flex-wrap items-center justify-center gap-2 ${className}`}
         >
             {/* Nút trang trước */}
             <button

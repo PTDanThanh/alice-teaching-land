@@ -118,11 +118,45 @@ export default function DocxPreview({
         <div className="docx-preview-wrapper">
             {/* CSS được sinh từ file DOCX */}
             <div ref={styleRef} />
-
-            {/* Thông báo tải */}
+            {/* Khung giấy trắng trong lúc tải */}
+            {/* Loading Skeleton cho trình xem Word */}
             {loading && (
-                <div className="p-8 text-center text-slate-500">
-                    Đang tải và xử lý tài liệu Word...
+                <div
+                    role="status"
+                    aria-label="Đang tải tài liệu Word"
+                    className="flex w-full justify-center p-4 sm:p-8"
+                >
+                    {/* Khung giấy A4 */}
+                    <div className="min-h-[700px] w-full max-w-[794px] animate-pulse bg-white px-6 py-10 shadow-md sm:px-12 sm:py-14">
+                        {/* Tiêu đề tài liệu */}
+                        <div className="mx-auto mb-10 h-7 w-2/3 rounded-md bg-slate-200" />
+
+                        {/* Đoạn văn thứ nhất */}
+                        <div className="mb-10 space-y-4">
+                            <div className="h-4 w-full rounded bg-slate-100" />
+                            <div className="h-4 w-full rounded bg-slate-100" />
+                            <div className="h-4 w-11/12 rounded bg-slate-100" />
+                            <div className="h-4 w-4/5 rounded bg-slate-100" />
+                        </div>
+
+                        {/* Tiêu đề phụ */}
+                        <div className="mb-6 h-5 w-1/3 rounded bg-slate-200" />
+
+                        {/* Đoạn văn thứ hai */}
+                        <div className="space-y-4">
+                            <div className="h-4 w-full rounded bg-slate-100" />
+                            <div className="h-4 w-10/12 rounded bg-slate-100" />
+                            <div className="h-4 w-full rounded bg-slate-100" />
+                            <div className="h-4 w-3/4 rounded bg-slate-100" />
+                        </div>
+
+                        {/* Đoạn văn thứ ba */}
+                        <div className="mt-12 space-y-4">
+                            <div className="h-4 w-full rounded bg-slate-100" />
+                            <div className="h-4 w-11/12 rounded bg-slate-100" />
+                            <div className="h-4 w-5/6 rounded bg-slate-100" />
+                        </div>
+                    </div>
                 </div>
             )}
 

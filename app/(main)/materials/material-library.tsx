@@ -324,22 +324,73 @@ export default function MaterialLibrary({
               </div>
             </div>
 
-            {/* Giữ chiều cao khu vực 6 tài liệu trên mọi trang */}
+            {/* Danh sách tài liệu */}
             <div
               className="
-    mt-5 grid gap-4
-    auto-rows-[minmax(260px,auto)]
-    min-h-[1640px]
-    md:min-h-[812px] md:grid-cols-2
-    2xl:min-h-[536px] 2xl:grid-cols-3
+    mt-5 grid items-start gap-4
+    auto-rows-auto
+    md:grid-cols-2
+    2xl:grid-cols-3
   "
             >
-              {paginatedMaterials.map((material) => {
+              {/* Loading Skeleton - hiển thị 6 card giả lập */}
+              {loading &&
+                Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+                  <article
+                    key={`material-skeleton-${index}`}
+                    aria-hidden="true"
+                    className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="animate-pulse space-y-4 motion-reduce:animate-none">
+                      {/* Icon định dạng và nhãn */}
+                      <div className="flex items-start gap-3">
+                        <div className="h-14 w-14 shrink-0 rounded-2xl bg-violet-100" />
+
+                        <div className="flex flex-1 flex-wrap gap-2 pt-2">
+                          <div className="h-5 w-14 rounded-full bg-slate-200" />
+                          <div className="h-5 w-20 rounded-full bg-slate-100" />
+                        </div>
+
+                        {/* Icon lưu tài liệu */}
+                        <div className="h-5 w-5 rounded bg-slate-100" />
+                      </div>
+
+                      {/* Tiêu đề tài liệu */}
+                      <div className="space-y-2">
+                        <div className="h-4 w-full rounded bg-slate-200" />
+                        <div className="h-4 w-3/4 rounded bg-slate-200" />
+                      </div>
+
+                      {/* Mô tả */}
+                      <div className="space-y-2">
+                        <div className="h-3 w-full rounded bg-slate-100" />
+                        <div className="h-3 w-5/6 rounded bg-slate-100" />
+                      </div>
+                    </div>
+
+                    {/* Ngày cập nhật và nút xem tài liệu */}
+                    <div className="mt-auto animate-pulse space-y-4 pt-5 motion-reduce:animate-none">
+                      <div className="h-3 w-2/3 rounded bg-slate-100" />
+                      <div className="h-10 w-full rounded-xl bg-violet-200" />
+                    </div>
+                  </article>
+                ))}
+              {!loading && !loadError && paginatedMaterials.map((material) => {
                 const format = materialFormats[material.type];
                 const Icon = iconFor(material);
                 const saved = savedIds.includes(material.id);
+
                 return (
-                  <article key={material.id} className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md">
+                  <article
+                    key={material.id}
+                    className="
+        flex min-h-[280px] min-w-0 flex-col
+        rounded-2xl border border-slate-200
+        bg-white p-4 shadow-sm
+        transition hover:-translate-y-0.5
+        hover:border-violet-200 hover:shadow-md
+      "
+                  >
                     <div className="flex items-start gap-3">
                       <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${iconColors(material.type)}`}><Icon className="h-8 w-8" strokeWidth={2} /></div>
                       <div className="min-w-0 flex-1">
@@ -384,20 +435,31 @@ export default function MaterialLibrary({
                 </div>
               )}
 
+              {!loading &&
+                !loadError &&
+                paginatedMaterials.length > 0 &&
+                Array.from({
+                  length: Math.max(0, ITEMS_PER_PAGE - paginatedMaterials.length),
+                }).map((_, index) => (
+                  <div
+                    key={`material-grid-placeholder-${index}`}
+                    aria-hidden="true"
+                  />
+                ))}
             </div>
 
 
             {/* Phân trang nằm ngay dưới danh sách */}
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-            {loading && (
-              <p className="mt-6 text-center text-sm text-slate-500">
-                Đang tải tài liệu...
-              </p>
+            {!loading && !loadError && (
+              <div className="mt-8 flex shrink-0 justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
             )}
+
 
             {loadError && (
               <p role="alert" className="mt-6 text-center text-sm text-red-600">

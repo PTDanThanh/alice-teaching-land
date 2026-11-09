@@ -184,7 +184,12 @@ export default function DocumentSection() {
                 {/* Giữ nguyên hiệu ứng trượt của giao diện cũ */}
                 <div className="overflow-hidden">
                     <div
-                        className="flex transition-transform duration-500 ease-in-out motion-reduce:transition-none"
+                        className="
+  flex transform-gpu
+  transition-transform duration-700
+  ease-[cubic-bezier(0.22,1,0.36,1)]
+  motion-reduce:transition-none
+"
                         style={{
                             transform: `translateX(-${slideIndex * 100}%)`,
                         }}
@@ -220,7 +225,7 @@ export default function DocumentSection() {
 
                                     {/* Ba nhóm tài liệu */}
                                     <div className="mt-10 grid grid-cols-1 gap-5 md:mt-14 md:grid-cols-3">
-                                        {documentGroups.map((group) => {
+                                        {documentGroups.map((group, groupIndex) => {
                                             // Số lượng thực tế theo ngôn ngữ + loại
                                             const count =
                                                 materialCounts[
@@ -229,9 +234,24 @@ export default function DocumentSection() {
 
                                             return (
                                                 <article
-                                                    key={group.id}
-                                                    className={`flex flex-col rounded-2xl border bg-[#F6F3FF] p-5 sm:p-6 ${group.borderClassName}`}
+                                                    key={`${slide.language}-${group.id}-${slideIndex}`}
+                                                    className={`
+    document-card-enter
+    group flex flex-col
+    rounded-2xl border bg-[#F6F3FF] p-5 sm:p-6
+
+    transition-all duration-300 ease-out
+    hover:-translate-y-2
+    hover:border-violet-400
+    hover:shadow-xl hover:shadow-violet-200/40
+
+    ${group.borderClassName}
+  `}
+                                                    style={{
+                                                        animationDelay: `${groupIndex * 100}ms`,
+                                                    }}
                                                 >
+
                                                     <div className="flex items-start justify-between gap-4">
                                                         <span
                                                             className={`inline-flex rounded-md px-3 py-1 text-xs font-bold text-white ${group.badgeClassName}`}
@@ -257,12 +277,16 @@ export default function DocumentSection() {
                                                                 aria-hidden="true"
                                                                 className="h-4 w-4 text-slate-900"
                                                             />
-
-                                                            {loading
-                                                                ? "Đang tải..."
-                                                                : loadError
-                                                                    ? "Chưa tải được"
-                                                                    : `${count} tài liệu`}
+                                                            {loading ? (
+                                                                <span
+                                                                    aria-label="Đang tải số lượng tài liệu"
+                                                                    className="inline-block h-3 w-16 animate-pulse rounded bg-slate-200 motion-reduce:animate-none"
+                                                                />
+                                                            ) : loadError ? (
+                                                                "Chưa tải được"
+                                                            ) : (
+                                                                `${count} tài liệu`
+                                                            )}
                                                         </span>
                                                     </div>
 
