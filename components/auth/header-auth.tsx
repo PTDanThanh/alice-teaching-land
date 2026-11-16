@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import apiClient, {
     getApiErrorMessage,
+    refreshAccessToken,
     type ApiResponse,
 } from "@/lib/http";
 
@@ -14,7 +15,10 @@ type AuthUser = {
     fullName: string;
     email: string;
     role: "admin" | "client";
+
 };
+// Làm mới access token trước khi hết hạn 60 giây.
+const REFRESH_BEFORE_MS = 60_000;
 
 export default function HeaderAuth() {
     const router = useRouter();
@@ -26,37 +30,56 @@ export default function HeaderAuth() {
     const [error, setError] = useState("");
     const menuRef = useRef<HTMLDetailsElement>(null);
 
+
     useEffect(() => {
         const controller = new AbortController();
 
+        let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+        let active = true;
+
+        function clearRefreshTimer() {
+            if (refreshTimer !== null) {
+                clearTimeout(refreshTimer);
+                refreshTimer = null;
+            }
+        }
+
+        // Lấy thông tin người dùng và thời hạn access token.
         async function loadUser() {
+            clearRefreshTimer();
+
             setLoading(true);
             setError("");
 
             try {
-                const response = await apiClient.get<ApiResponse<{ user: AuthUser }>>(
-                    "/api/me",
-                    { signal: controller.signal },
-                );
+                const response = await apiClient.get<{
+                    user: AuthUser;
+                    accessExpiresAt: number;
+                }>("/api/me", {
+                    signal: controller.signal,
+                });
 
-                const payload = response.data as ApiResponse<{ user: AuthUser }> & {
-                    user?: AuthUser;
-                    data?: { user?: AuthUser };
-                };
+                if (!active) return;
 
-                const currentUser = payload.user ?? payload.data?.user;
+                const { user: currentUser, accessExpiresAt } = response.data;
 
                 if (!currentUser) {
-                    throw new Error(payload.message ?? "Không thể lấy thông tin tài khoản.");
+                    throw new Error("Không thể lấy thông tin tài khoản.");
                 }
 
                 setUser(currentUser);
+
+                // Lên lịch refresh trước khi token hết hạn.
+                scheduleRefresh(accessExpiresAt);
             } catch (error: unknown) {
-                if (controller.signal.aborted || axios.isCancel(error)) {
+                if (!active || controller.signal.aborted || axios.isCancel(error)) {
                     return;
                 }
 
-                if (axios.isAxiosError(error) && error.response?.status === 401) {
+                if (
+                    axios.isAxiosError(error) &&
+                    error.response?.status === 401
+                ) {
                     setUser(null);
                     return;
                 }
@@ -68,16 +91,73 @@ export default function HeaderAuth() {
                     ),
                 );
             } finally {
-                if (!controller.signal.aborted) {
+                if (active && !controller.signal.aborted) {
                     setLoading(false);
                 }
             }
         }
 
+        // Lên lịch refresh dựa trên thời điểm hết hạn thực tế.
+        function scheduleRefresh(expiresAt: number) {
+            clearRefreshTimer();
+
+            if (!Number.isFinite(expiresAt)) return;
+
+            const delay = Math.max(
+                0,
+                expiresAt - Date.now() - REFRESH_BEFORE_MS,
+            );
+
+            refreshTimer = setTimeout(async () => {
+                if (!active) return;
+
+                try {
+                    // Dùng chung refreshPromise với Axios interceptor.
+                    await refreshAccessToken(expiresAt);
+
+                    if (!active) return;
+
+                    // Lấy thời hạn mới sau khi refresh.
+                    const response = await apiClient.get<{
+                        accessExpiresAt: number;
+                    }>("/api/me");
+
+                    if (!active) return;
+
+                    scheduleRefresh(response.data.accessExpiresAt);
+                } catch {
+                    // Không lặp vô hạn nếu refresh thất bại.
+                    clearRefreshTimer();
+                }
+            }, delay);
+        }
+
+        // Khi quay lại tab, đồng bộ lại thời hạn token.
+        function handleVisibilityChange() {
+            if (document.visibilityState === "visible") {
+                void loadUser();
+            }
+        }
+
         void loadUser();
 
-        return () => controller.abort();
+        document.addEventListener(
+            "visibilitychange",
+            handleVisibilityChange,
+        );
+
+        return () => {
+            active = false;
+            controller.abort();
+            clearRefreshTimer();
+
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibilityChange,
+            );
+        };
     }, [pathname]);
+
 
     async function handleLogout() {
         if (loggingOut) return;

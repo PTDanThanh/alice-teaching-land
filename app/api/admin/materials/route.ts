@@ -78,22 +78,10 @@ export async function POST(request: Request) {
     // DEBUG: Kiểm tra dữ liệu Admin gửi trước khi parse
     const body = await request.json();
 
-    console.log("[Materials POST - Request]", {
-      type: body?.type,
-      downloadUrl: body?.downloadUrl,
-    });
 
     // Kiểm tra dữ liệu sau khi parse
     const parsed = parseMaterial(body);
 
-    console.log("[Materials POST - Parsed]", {
-      type: parsed?.type,
-      downloadUrl: parsed?.downloadUrl,
-    });
-    console.log("[Admin Materials POST]", {
-      type: parsed?.type,
-      downloadUrl: parsed?.downloadUrl,
-    });
 
 
     if (!parsed) {
@@ -163,7 +151,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "File chưa được xác nhận hoặc đã được sử dụng.",
+            "File chưa sẵn sàng sử dụng. Vui lòng chờ kiểm tra bảo mật và xử lý hoàn tất.",
         },
         { status: 409 }
       );

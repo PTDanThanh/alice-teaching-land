@@ -8,7 +8,11 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { getCurrentSessionUser } from "@/lib/auth/session";
 import { canManageMaterials, connectMaterialsDB } from "@/lib/materials";
-import { getR2Client, getR2Bucket } from "@/lib/material-storage";
+import {
+  getR2Client,
+  getR2Bucket,
+  createMaterialStagingKey,
+} from "@/lib/material-storage";
 import MaterialUploadModel from "@/src/models/materialUpload";
 
 export const runtime = "nodejs";
@@ -146,10 +150,18 @@ export async function POST(request: NextRequest) {
     // 3. TẠO THÔNG TIN UPLOAD
     // =================================================
 
+
+    // =====================================================
+    // BƯỚC 11E.1 - UPLOAD VÀO VÙNG CÁCH LY
+    // =====================================================
+
+    // Tạo mã phiên upload duy nhất.
     const uploadId = randomUUID();
 
-    const objectKey =
-      `materials/original/${randomUUID()}${extension}`;
+    // File mới luôn được đưa vào staging.
+    // Chưa được xem là an toàn hoặc cho phép tải.
+    const objectKey = createMaterialStagingKey(extension);
+
 
     const expiresAt = new Date(
       Date.now() + UPLOAD_SESSION_EXPIRES_IN

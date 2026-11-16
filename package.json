@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start -p 3002",
     "admin:create": "node --env-file=.env --env-file=.env.local scripts/create-admin.mjs",
-    "db:repair-user-indexes": "node --env-file=.env --env-file=.env.local scripts/repair-user-indexes.mjs"
+    "db:repair-user-indexes": "node --env-file=.env --env-file=.env.local scripts/repair-user-indexes.mjs",
+    "worker:materials": "node --conditions=react-server --env-file=.env --env-file=.env.local --import tsx scripts/material-scan-worker.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1157.0",
@@ -58,6 +59,7 @@
     "eslint-config-next": "16.3.7",
     "pptxgenjs": "^4.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

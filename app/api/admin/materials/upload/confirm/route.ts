@@ -95,13 +95,76 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // File đã được gắn vào tài liệu
-    if (upload.status === "attached") {
+
+    // =====================================================
+    // BƯỚC 11E - KIỂM TRA VÙNG CÁCH LY
+    // =====================================================
+
+    // File mới phải được upload vào staging.
+    // Không xác nhận file ở original, verified hoặc preview.
+    if (!upload.objectKey.startsWith("materials/staging/")) {
       return NextResponse.json(
-        { error: "File đã được sử dụng bởi tài liệu." },
+        {
+          error: "File không thuộc vùng upload an toàn.",
+        },
         { status: 409 }
       );
     }
+
+    // Chỉ phiên pending mới được xác nhận lần đầu.
+    // Không thực hiện HEAD hoặc xác nhận lại file
+    // đã chuyển sang quá trình scan/promotion.
+    if (upload.status !== "pending") {
+      if (upload.status === "confirmed") {
+        return NextResponse.json({
+          success: true,
+          message: "File đã được xác nhận trước đó.",
+          data: {
+            uploadId: upload.uploadId,
+            key: upload.objectKey,
+            status: upload.status,
+          },
+        });
+      }
+
+      return NextResponse.json(
+        { error: "Phiên upload không còn ở trạng thái pending." },
+        { status: 409 }
+      );
+    }
+
+
+
+    // =====================================================
+    // KIỂM TRA TRẠNG THÁI QUÉT BẢO MẬT
+    // =====================================================
+
+    // Từ chối file đã được xác định nhiễm mã độc.
+    // Không tự động coi file pending hoặc scanning là an toàn.
+    if (upload.scanStatus === "infected") {
+      return NextResponse.json(
+        { error: "File đã bị từ chối vì phát hiện mã độc." },
+        { status: 422 }
+      );
+    }
+
+    // Không xác nhận khi quá trình quét đang diễn ra.
+    if (upload.scanStatus === "scanning") {
+      return NextResponse.json(
+        { error: "File đang được kiểm tra bảo mật." },
+        { status: 409 }
+      );
+    }
+
+    // Không xác nhận nếu quá trình quét trước đó thất bại.
+    if (upload.scanStatus === "failed") {
+      return NextResponse.json(
+        { error: "Không thể hoàn tất kiểm tra bảo mật file." },
+        { status: 409 }
+      );
+    }
+    // File đã được gắn vào tài liệu
+
 
     // Không cho xác nhận phiên upload đã hết hạn
     if (upload.expiresAt.getTime() <= Date.now()) {
@@ -144,11 +207,21 @@ export async function POST(request: NextRequest) {
 
     // Chỉ chuyển pending -> confirmed
     // Tránh ghi đè trạng thái nếu có request đồng thời
+
     const confirmed = await MaterialUploadModel.findOneAndUpdate(
       {
         _id: upload._id,
         ownerId,
+
+        // Chỉ xác nhận phiên chưa được xử lý.
         status: "pending",
+        scanStatus: "pending",
+        promotionStatus: "pending",
+
+        // Chỉ xác nhận khi objectKey chưa thay đổi.
+        objectKey: upload.objectKey,
+
+        // Không cho xác nhận phiên đã hết hạn.
         expiresAt: { $gt: new Date() },
       },
       {
@@ -160,6 +233,7 @@ export async function POST(request: NextRequest) {
         new: true,
       }
     );
+
 
     // Nếu request xác nhận bị lặp lại, trả về kết quả hiện tại
     if (!confirmed) {

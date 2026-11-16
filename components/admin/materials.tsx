@@ -13,9 +13,15 @@ import {
     Save,
     Send
 } from "lucide-react";
-import type { Material, MaterialFormat, MaterialStatus } from "@/data/materials";
+import type {
+    Material,
+    MaterialFormat,
+    MaterialStatus,
+    MaterialTypeFilter,
+} from "@/data/materials";
 import { normalizeMaterialText } from "@/data/materials";
 import Pagination from "@/components/ui/pagination";
+import MaterialUploadProgress from "@/components/admin/material-upload-progress";
 
 type Row = Material;
 type Status = MaterialStatus;
@@ -93,7 +99,87 @@ function getMaterialTypeFromFile(
     throw new Error("Định dạng tài liệu không được hỗ trợ.");
 }
 
-async function uploadMaterialFile(file: File): Promise<string> {
+//hàm chờ file verified key
+type UploadPhase =
+    | "creating"
+    | "uploading"
+    | "confirming"
+    | "scan_pending"
+    | "scanning"
+    | "promotion_pending"
+    | "promoting"
+    | "ready"
+    | "infected"
+    | "failed"
+    | "expired"
+    | "cleanup"
+    | "attached";
+
+type UploadStatus = {
+    success: boolean;
+    data?: {
+        phase: UploadPhase;
+        ready: boolean;
+        key: string | null;
+    };
+};
+const VERIFIED_KEY_PATTERN =
+    /^materials\/verified\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|doc|docx|ppt|pptx)$/i;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+//POlling trang thái thực tế từ MongoDB
+//không tự giả lập phần trăm quét virus
+async function waitForVerifiedUpload(
+    uploadId: string,
+    onPhaseChange: (phase: UploadPhase) => void
+): Promise<string> {
+    const deadline = Date.now() + 5 * 60 * 1000; // 5 phút
+
+    while (Date.now() < deadline) {
+        const response = await fetch(
+            `/api/admin/materials/upload/status/${encodeURIComponent(uploadId)}`,
+            { cache: "no-store" }
+        );
+        if (!response.ok) {
+            throw new Error("Không đọc được trạng thái upload từ server.");
+        }
+
+        const result = await response.json() as UploadStatus;
+        const data = result.data;
+
+        if (!result.success || !data) {
+            throw new Error("Không đọc được trang thái fille upload từ server.");
+        }
+        onPhaseChange(data.phase);
+        // Chỉ sử dụng verified key do backend xác nhận.
+        if (data.ready) {
+            if (!data.key || !VERIFIED_KEY_PATTERN.test(data.key)) {
+                throw new Error("Verified key không hợp lệ.");
+            }
+
+            return data.key;
+        }
+
+        if (
+            ["infected", "failed", "expired", "cleanup", "attached"].includes(
+                data.phase
+            )
+        ) {
+            throw new Error(
+                `File không thể tiếp tục xử lý: ${data.phase}`
+            );
+        }
+
+        await sleep(3000);
+    }
+
+    throw new Error(
+        "Hết thời gian chờ. File có thể vẫn đang xử lý; hãy kiểm tra bảng tiến độ."
+    );
+}
+
+async function uploadMaterialFile(file: File, onPhaseChange: (phase: UploadPhase) => void, onCreated: (uploadId: string) => void): Promise<string> {
     // Bước 1: Yêu cầu backend tạo phiên upload và Presigned URL
     const response = await fetch("/api/admin/materials/upload", {
         method: "POST",
@@ -114,6 +200,9 @@ async function uploadMaterialFile(file: File): Promise<string> {
     const result = await response.json();
 
     const { uploadId, uploadUrl, contentType } = result.data;
+    //thông báo cho bảng progress có phiên upload mới
+    onCreated(uploadId);
+    onPhaseChange("uploading");
 
     // Bước 2: Upload trực tiếp lên Cloudflare R2
     const uploadResponse = await fetch(uploadUrl, {
@@ -128,6 +217,7 @@ async function uploadMaterialFile(file: File): Promise<string> {
         throw new Error("Không thể upload file lên Cloudflare R2.");
     }
 
+    onPhaseChange("confirming");
     // Bước 3: Yêu cầu backend xác nhận file đã upload
     const confirmResponse = await fetch(
         "/api/admin/materials/upload/confirm",
@@ -156,7 +246,7 @@ async function uploadMaterialFile(file: File): Promise<string> {
         throw new Error("Không nhận được khóa file đã xác nhận.");
     }
 
-    return confirmed.data.key;
+    return await waitForVerifiedUpload(uploadId, onPhaseChange);
 }
 
 
@@ -167,6 +257,17 @@ export default function MaterialsAdmin({
     const [rows, setRows] = useState<Row[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    // BƯỚC 11E.7 - Theo dõi trạng thái upload
+    const [uploadPhase, setUploadPhase] =
+        useState<UploadPhase | null>(null);
+
+    const [uploadProgressOpen, setUploadProgressOpen] = useState(false);
+
+    // Làm mới bảng tiến độ upload
+    const [uploadRefreshKey, setUploadRefreshKey] =
+        useState(0);
+
     // Lưu file được chọn trước khi upload
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -175,7 +276,8 @@ export default function MaterialsAdmin({
     const [from, setFrom] = useState("");
     const [to, setTo] = useState("");
     const [language, setLanguage] = useState("all");
-    const [type, setType] = useState("all");
+    const [typeFilter, setTypeFilter] =
+        useState<MaterialTypeFilter>("all");
     const [status, setStatus] = useState("all");
     const [page, setPage] = useState(1);
 
@@ -184,6 +286,17 @@ export default function MaterialsAdmin({
     const [deleting, setDeleting] = useState<Row | null>(null);
 
     const isHomeMode = mode === "home";
+
+    useEffect(() => {
+        if (!uploadProgressOpen) return;
+
+        function closeOnEscape(event: KeyboardEvent) {
+            if (event.key === "Escape") setUploadProgressOpen(false);
+        }
+
+        document.addEventListener("keydown", closeOnEscape);
+        return () => document.removeEventListener("keydown", closeOnEscape);
+    }, [uploadProgressOpen]);
 
     // Cả hai trang Admin cùng lấy dữ liệu từ MongoDB qua một API.
     const loadMaterials = useCallback(async () => {
@@ -249,12 +362,12 @@ export default function MaterialsAdmin({
                     (!from || day >= from) &&
                     (!to || day <= to) &&
                     (language === "all" || item.language === language) &&
-                    (type === "all" || item.type === type) &&
+                    (typeFilter === "all" || item.type === typeFilter) &&
                     (status === "all" || item.status === status)
                 );
             })
             .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-    }, [rows, search, from, to, language, type, status]);
+    }, [rows, search, from, to, language, typeFilter, status]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const safePage = Math.min(page, totalPages);
@@ -272,32 +385,52 @@ export default function MaterialsAdmin({
         setFrom("");
         setTo("");
         setLanguage("all");
-        setType("all");
+        setTypeFilter("all");
         setStatus("all");
         resetPage();
     }
 
+
+    // =====================================================
+    // BƯỚC 11E.7 - LƯU TÀI LIỆU SAU KHI FILE VERIFIED
+    // =====================================================
+
     async function save() {
+        // Không lưu khi form không hợp lệ hoặc đang xử lý.
         if (!editing || !editing.title.trim() || saving) return;
 
         try {
             setSaving(true);
             setError(null);
 
-            // Giữ lại file cũ nếu Admin không chọn file mới
+            // 1. Giữ file cũ nếu Admin không chọn file mới.
             let downloadUrl = editing.downloadUrl;
 
-            // Nếu chọn file mới, thực hiện đầy đủ:
-            // Tạo phiên -> Upload R2 -> Xác nhận
+            // 2. Nếu chọn file mới, thực hiện:
+            // Tạo phiên -> Upload R2 -> Confirm
+            // -> Scan ClamAV -> Promotion -> Verified.
             if (selectedFile) {
-                downloadUrl = await uploadMaterialFile(selectedFile);
+                setUploadPhase("creating");
+                setUploadProgressOpen(true);
+
+                downloadUrl = await uploadMaterialFile(
+                    selectedFile,
+                    setUploadPhase,
+                    () => {
+                        // Cập nhật bảng tiến độ khi có upload mới.
+                        setUploadRefreshKey((current) => current + 1);
+                    }
+                );
             }
 
-            // Xác định API tạo mới hoặc cập nhật
+            // 3. Xác định API tạo mới hoặc cập nhật.
+            // Đặt ngoài if(selectedFile) để hỗ trợ lưu
+            // cả khi Admin chỉ sửa thông tin tài liệu.
             const url = isCreating
                 ? "/api/admin/materials"
                 : `/api/admin/materials/${encodeURIComponent(editing.id)}`;
 
+            // 4. Gửi dữ liệu lên backend.
             const response = await fetch(url, {
                 method: isCreating ? "POST" : "PUT",
                 headers: {
@@ -309,14 +442,15 @@ export default function MaterialsAdmin({
                     collection: editing.collection,
                     level: editing.level,
 
-                    // Khi có file mới, loại tài liệu lấy từ file
+                    // Khi thay file, đồng bộ loại tài liệu.
                     type: selectedFile
                         ? getMaterialTypeFromFile(selectedFile)
                         : editing.type,
 
                     language: editing.language,
 
-                    // Quan trọng: lưu key mới thay vì editing.downloadUrl cũ
+                    // Verified key khi upload mới;
+                    // file cũ nếu không chọn file mới.
                     downloadUrl,
 
                     status: editing.status,
@@ -328,37 +462,58 @@ export default function MaterialsAdmin({
                 throw new Error(await getApiError(response));
             }
 
-            // Tải lại danh sách từ MongoDB
+            // 5. Làm mới danh sách tài liệu từ MongoDB.
             await loadMaterials();
 
-            // Reset form sau khi lưu thành công
+            //reset form sau khi lưu thành công.
+            setUploadPhase(null);
+
+            // 6. Cập nhật bảng tiến độ sau khi attach.
+            if (selectedFile) {
+                setUploadRefreshKey((current) => current + 1);
+            }
+
+            // 7. Reset form sau khi lưu thành công.
             setSelectedFile(null);
             setEditing(null);
             setIsCreating(false);
             resetPage();
+
         } catch (err) {
+            // Nếu upload hoặc attach thất bại:
+            // Không đóng modal để Admin xem thông báo lỗi.
             setError(
                 err instanceof Error
                     ? err.message
                     : "Không lưu được tài liệu."
             );
+
         } finally {
+            // Luôn mở khóa nút lưu sau khi hoàn tất.
             setSaving(false);
         }
     }
 
+    // =====================================================
+    // ĐỔI TRẠNG THÁI XUẤT BẢN / BẢN NHÁP
+    // =====================================================
 
-    // Đổi trạng thái bằng API PUT (không sử dụng PATCH nếu route chưa hỗ trợ).
     async function changeStatus(item: Row, next: Status) {
         if (saving) return;
+
         try {
             setSaving(true);
             setError(null);
+
+            // Chỉ thay đổi trạng thái của tài liệu.
+            // Giữ nguyên file hiện tại.
             const response = await fetch(
                 `/api/admin/materials/${encodeURIComponent(item.id)}`,
                 {
                     method: "PUT",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
                     body: JSON.stringify({
                         title: item.title,
                         description: item.description,
@@ -370,16 +525,28 @@ export default function MaterialsAdmin({
                         status: next,
                         showOnHome: item.showOnHome,
                     }),
-                },
+                }
             );
-            if (!response.ok) throw new Error(await getApiError(response));
+
+            if (!response.ok) {
+                throw new Error(await getApiError(response));
+            }
+
+            // Đồng bộ danh sách sau khi đổi trạng thái.
             await loadMaterials();
+
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Không đổi được trạng thái.");
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Không đổi được trạng thái."
+            );
+
         } finally {
             setSaving(false);
         }
     }
+
 
     async function deleteMaterial() {
         if (!deleting || saving) return;
@@ -498,25 +665,28 @@ export default function MaterialsAdmin({
                             />
                         </label>
 
-                        {/* Ngôn ngữ */}
+                        {/* Lọc theo loại tài liệu
                         <label className="w-40 shrink-0">
                             <span className="mb-1 block text-xs font-semibold text-slate-500">
-                                Ngôn ngữ
+                                Lọc theo loại tài liệu
                             </span>
 
                             <select
-                                value={language}
+                                value={typeFilter}
                                 onChange={(event) => {
-                                    setLanguage(event.target.value);
+                                    setTypeFilter(
+                                        event.target.value as MaterialTypeFilter
+                                    );
                                     resetPage();
                                 }}
                                 className={selectClass}
                             >
-                                <option value="all">Tất cả ngôn ngữ</option>
-                                <option value="en">Tiếng Anh</option>
-                                <option value="fr">Tiếng Pháp</option>
+                                <option value="all">Tất cả loại tài liệu</option>
+                                <option value="pdf">PDF</option>
+                                <option value="word">Word</option>
+                                <option value="powerpoint">PowerPoint</option>
                             </select>
-                        </label>
+                        </label> */}
 
                         {/* Loại tài liệu */}
                         <label className="w-40 shrink-0">
@@ -586,6 +756,16 @@ export default function MaterialsAdmin({
 
 
                     <div className="mt-2 flex flex-wrap items-center justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setUploadProgressOpen(true)}
+                            aria-haspopup="dialog"
+                            aria-expanded={uploadProgressOpen}
+                            className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-4 py-2.5 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+                        >
+                            <FileText size={17} />
+                            Tiến độ xử lý file
+                        </button>
 
                         {/* Nút thêm tài liệu */}
                         <button
@@ -615,6 +795,7 @@ export default function MaterialsAdmin({
                             <Plus size={18} strokeWidth={2.5} />
                             <span>Thêm tài liệu</span>
                         </button>
+
                     </div>
 
                 </section>
@@ -741,6 +922,74 @@ export default function MaterialsAdmin({
                 </section>
             </div>
 
+            {uploadProgressOpen && (
+                <div
+                    className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/50 p-4"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setUploadProgressOpen(false);
+                        }
+                    }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="upload-progress-title"
+                        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+                    >
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+                            <div>
+                                <h2 id="upload-progress-title" className="text-xl font-extrabold text-slate-900">
+                                    Tiến độ xử lý file
+                                </h2>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Theo dõi upload, quét virus và xác minh tài liệu
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setUploadProgressOpen(false)}
+                                aria-label="Đóng tiến độ xử lý file"
+                                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="overflow-y-auto p-4 sm:p-5">
+                            {uploadPhase && (
+                                <div
+                                    role="status"
+                                    aria-live="polite"
+                                    className="mb-4 rounded-xl border border-violet-200 bg-violet-50 p-4"
+                                >
+                                    <p className="text-sm font-semibold text-violet-800">
+                                        {{
+                                            creating: "Đang tạo phiên upload...",
+                                            uploading: "Đang tải file lên R2...",
+                                            confirming: "Đang xác nhận file...",
+                                            scan_pending: "Đang chờ quét virus...",
+                                            scanning: "Đang quét virus bằng ClamAV...",
+                                            promotion_pending: "Đang chờ Promotion...",
+                                            promoting: "Đang chuyển file sang verified...",
+                                            ready: "File đã sẵn sàng.",
+                                            infected: "Phát hiện file không an toàn.",
+                                            failed: "Xử lý file thất bại.",
+                                            expired: "Phiên upload hết hạn.",
+                                            cleanup: "File đang được dọn dẹp.",
+                                            attached: "File đã được gắn vào tài liệu.",
+                                        }[uploadPhase]}
+                                    </p>
+                                    <p className="mt-1 text-xs text-violet-600">
+                                        Vui lòng chờ quá trình kiểm tra hoàn tất.
+                                    </p>
+                                </div>
+                            )}
+                            <MaterialUploadProgress refreshKey={uploadRefreshKey} />
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {editing && (
                 <div
                     className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4"
@@ -753,7 +1002,20 @@ export default function MaterialsAdmin({
                             <h2 id="edit-material-title" className="text-xl font-extrabold">
                                 {isCreating ? "Thêm tài liệu" : "Chỉnh sửa tài liệu"}
                             </h2>
-                            <button type="button" disabled={saving} onClick={() => setEditing(null)} aria-label="Đóng"><X size={22} /></button>
+                            <div className="flex items-center gap-2">
+                                {uploadPhase && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setUploadProgressOpen(true)}
+                                        aria-haspopup="dialog"
+                                        aria-expanded={uploadProgressOpen}
+                                        className="rounded-lg px-3 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-50"
+                                    >
+                                        Tiến độ xử lý
+                                    </button>
+                                )}
+                                <button type="button" disabled={saving} onClick={() => setEditing(null)} aria-label="Đóng"><X size={22} /></button>
+                            </div>
                         </div>
                         <form onSubmit={(event) => { event.preventDefault(); void save(); }} className="grid gap-4 sm:grid-cols-2">
                             <label className="sm:col-span-2">

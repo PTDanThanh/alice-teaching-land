@@ -127,7 +127,7 @@ export function parseMaterial(
 
     // Kiểm tra object key được tạo bởi hệ thống upload R2
     const R2_MATERIAL_KEY_PATTERN =
-        /^materials\/original\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|doc|docx|ppt|pptx)$/i;
+        /^materials\/(?:original|verified)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(pdf|doc|docx|ppt|pptx)$/i;
 
     if (
         downloadUrl &&

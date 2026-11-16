@@ -83,9 +83,14 @@ export async function signAccessToken(
     .sign(getSecret());
 }
 
+
 export async function verifyAccessToken(
   token: string,
-): Promise<{ userId: string; sessionId: string } | null> {
+): Promise<{
+  userId: string;
+  sessionId: string;
+  expiresAt: number;
+} | null> {
   const secret = getSecret();
 
   try {
@@ -108,6 +113,10 @@ export async function verifyAccessToken(
     return {
       userId: payload.sub,
       sessionId: payload.sid,
+
+      // JWT exp tính bằng giây.
+      // Chuyển sang milliseconds để frontend dùng với Date.now().
+      expiresAt: payload.exp * 1000,
     };
   } catch {
     return null;
