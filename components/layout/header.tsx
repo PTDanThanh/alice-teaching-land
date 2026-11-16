@@ -19,7 +19,7 @@ type HeaderProps = {
     logoSrc?: string;
 };
 
-export default function Header({ logoSrc }: HeaderProps) {
+export default function Header({ logoSrc = "/logo.png" }: HeaderProps) {
     const pathname = usePathname();
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -40,18 +40,17 @@ export default function Header({ logoSrc }: HeaderProps) {
                 <Link
                     href="/"
                     onClick={closeMenu}
-                    className="flex min-w-0 items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-violet-500 sm:gap-3"
+                    className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-violet-500"
                 >
-                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#F5F2FF]">
-                        {logoSrc && (
-                            <Image
-                                src={logoSrc}
-                                alt=""
-                                fill
-                                sizes="40px"
-                                className="object-contain"
-                            />
-                        )}
+                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-[#F5F2FF]">
+                        <Image
+                            src="/logo.png"
+                            alt="Alice in Teachingland"
+                            fill
+                            sizes="48px"
+                            className="object-contain scale-100"
+                            priority
+                        />
                     </div>
 
                     <div className="min-w-0">
@@ -79,8 +78,8 @@ export default function Header({ logoSrc }: HeaderProps) {
                                 href={item.href}
                                 aria-current={active ? "page" : undefined}
                                 className={`whitespace-nowrap rounded-lg px-1 py-2 text-base transition-colors focus-visible:outline-2 focus-visible:outline-violet-500 ${active
-                                        ? "font-semibold text-[#5143EF]"
-                                        : "text-slate-600 hover:text-[#5143EF]"
+                                    ? "font-semibold text-[#5143EF]"
+                                    : "text-slate-600 hover:text-[#5143EF]"
                                     }`}
                             >
                                 {item.label}
@@ -138,8 +137,8 @@ export default function Header({ logoSrc }: HeaderProps) {
                                 onClick={closeMenu}
                                 aria-current={active ? "page" : undefined}
                                 className={`rounded-xl px-4 py-3 text-sm ${active
-                                        ? "bg-violet-50 font-semibold text-[#5143EF]"
-                                        : "text-slate-600 hover:bg-violet-50"
+                                    ? "bg-violet-50 font-semibold text-[#5143EF]"
+                                    : "text-slate-600 hover:bg-violet-50"
                                     }`}
                             >
                                 {item.label}
