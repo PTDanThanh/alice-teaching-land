@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   BookOpenText,
   FileText,
+  Headphones,
   PanelsTopLeft,
   Sparkles,
 } from "lucide-react";
@@ -56,6 +57,13 @@ const quickLinks = [
     Icon: BookOpenText,
     color: "bg-amber-100 text-amber-700",
   },
+  {
+    href: "/admin/skills",
+    title: "Quản lý kỹ năng",
+    description: "Tạo và xuất bản bài luyện nghe cho người học.",
+    Icon: Headphones,
+    color: "bg-emerald-100 text-emerald-700",
+  },
 ];
 
 export default function AdminDashboardPage() {
@@ -99,7 +107,7 @@ export default function AdminDashboardPage() {
           <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Truy cập nhanh</h2>
           <p className="mt-1 text-sm text-slate-500">Các khu vực nội dung của website</p>
         </div>
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid gap-4 xl:grid-cols-4">
           {quickLinks.map(({ href, title, description, Icon, color }) => (
             <Link
               key={href}

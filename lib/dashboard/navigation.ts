@@ -1,6 +1,7 @@
 import {
     BookOpenText,
     FileText,
+    Headphones,
     LayoutDashboard,
     PanelsTopLeft,
     User,
@@ -27,6 +28,12 @@ export const adminNavigation: DashboardNavigationItem[] = [
         label: "Người truy cập",
         icon: User,
         href: "/admin/users",
+    },
+    {
+        key: "skills",
+        label: "Quản lý kỹ năng",
+        icon: Headphones,
+        href: "/admin/skills",
     },
 
     {

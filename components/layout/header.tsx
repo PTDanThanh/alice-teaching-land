@@ -12,7 +12,9 @@ const navigation = [
     { label: "Giới thiệu", href: "/about" },
     { label: "Tài liệu", href: "/materials" },
     { label: "Flashcard", href: "/flashcards" },
+    { label: "Kỹ năng", href: "/skills" },
     { label: "Hoạt động", href: "/activities" },
+
 ];
 
 type HeaderProps = {
